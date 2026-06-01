@@ -8,20 +8,20 @@ import trading.domain.market.Symbol
 
 import java.time.Instant
 
-/** Strategy = composition of components configured by super-admins. Admins assemble them. */
 object strategy {
 
-  /** Technical indicator a component can be parameterised against. */
   enum Indicator derives CanEqual {
     case RSI, MACD, EMA, SMA, BollingerBands, ATR, Stochastic, VWAP
   }
 
-  /** A reusable building block authored by super-admins. */
+  type ComponentName = ComponentName.T
+  object ComponentName extends RefinedType[String, Not[Empty] & MaxLength[120]]
+
   final case class StrategyComponent(
       id: ComponentId,
-      name: String :| (Not[Empty] & MaxLength[120]),
+      name: ComponentName,
       indicator: Indicator,
-      params: Map[String, Double], // e.g. {"period": 14, "overbought": 70}
+      params: Map[String, Double],
       isActive: Boolean,
       createdAt: Instant
   ) derives CanEqual
@@ -30,13 +30,19 @@ object strategy {
     case Conservative, Balanced, Aggressive
   }
 
+  type StrategyName = StrategyName.T
+  object StrategyName extends RefinedType[String, Not[Empty] & MaxLength[120]]
+
+  type MaxLeverage = MaxLeverage.T
+  object MaxLeverage extends RefinedType[Int, GreaterEqual[1] & LessEqual[25]]
+
   final case class Strategy(
       id: StrategyId,
-      name: String :| (Not[Empty] & MaxLength[120]),
+      name: StrategyName,
       symbol: Symbol,
       components: List[ComponentId],
       maxDrawdown: Percent,
-      maxLeverage: Int :| (GreaterEqual[1] & LessEqual[25]),
+      maxLeverage: MaxLeverage,
       managementFee: FeeBps,
       performanceFee: FeeBps,
       risk: RiskLevel,
@@ -45,7 +51,6 @@ object strategy {
       updatedAt: Instant
   ) derives CanEqual
 
-  /** Past performance, computed offline; cached for display in the client portal. */
   final case class StrategyStats(
       strategyId: StrategyId,
       returns30d: Double,

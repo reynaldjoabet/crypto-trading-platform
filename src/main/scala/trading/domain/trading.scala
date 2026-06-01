@@ -2,11 +2,10 @@ package trading.domain
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
+import trading.domain.ids.*
 import trading.domain.money.*
 
 import java.time.Instant
-
-import trading.domain.ids.*
 
 object market {
 
@@ -29,16 +28,12 @@ object market {
   enum Venue(val code: String) derives CanEqual {
     case Kraken extends Venue("KRAKEN")
     case Binance extends Venue("BINANCE")
-    case FTX extends Venue("FTX") // historical — kept for migration tests
+    case FTX extends Venue("FTX")
     case Mock extends Venue("MOCK")
   }
 
-  /** Trading pair like BTC/USD. */
-  type Symbol = String :| Match["^[A-Z0-9]{2,10}/[A-Z0-9]{2,10}$"]
-  object Symbol {
-    inline def apply(s: String): Either[String, Symbol] = s.refineEither
-    inline def unsafe(s: String): Symbol = s.refineUnsafe
-  }
+  type Symbol = Symbol.T
+  object Symbol extends RefinedType[String, Match["^[A-Z0-9]{2,10}/[A-Z0-9]{2,10}$"]]
 
   final case class Instrument(
       id: InstrumentId,
@@ -50,7 +45,6 @@ object market {
       createdAt: Instant
   ) derives CanEqual
 
-  /** What a client/admin asks for. Pure intent — no exchange ack yet. */
   final case class OrderIntent(
       id: OrderId,
       accountId: AccountId,
@@ -65,7 +59,6 @@ object market {
       createdAt: Instant
   ) derives CanEqual
 
-  /** Lifecycle state pinned to a venue-side order id once submitted. */
   final case class Order(
       intent: OrderIntent,
       status: OrderStatus,

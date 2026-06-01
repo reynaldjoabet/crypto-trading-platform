@@ -1,81 +1,56 @@
 package trading.domain
 
 import java.util.UUID
+import io.github.iltotore.iron.*
 
-/** Opaque-typed identifiers. UUIDs at the wire level; distinct types in code. */
+/** Refined identifiers using Iron's RefinedType pattern.
+  *
+  * Each UUID-based ID type extends RefinedType with a simple constraint (UUIDs themselves cannot be invalid once
+  * constructed). Inherits apply/value helpers for safe construction and extraction. This provides:
+  *   - Compile-time type distinction (UserId != AccountId)
+  *   - Consistent pattern with other refined types (money, addresses)
+  *   - Automatic codec support via Iron integration
+  */
 object ids {
 
-  opaque type UserId = UUID
-  opaque type AccountId = UUID
-  opaque type WalletId = UUID
-  opaque type InstrumentId = UUID
-  opaque type StrategyId = UUID
-  opaque type ComponentId = UUID
-  opaque type OrderId = UUID
-  opaque type TradeId = UUID
-  opaque type LedgerEntryId = UUID
-  opaque type ProjectId = UUID
-  opaque type DonationId = UUID
-  opaque type PostId = UUID
+  // ── User IDs ──
+  type UserId = UserId.T
+  object UserId extends RefinedType[UUID, True]
 
-  object UserId {
-    inline def apply(u: UUID): UserId = u
-    extension (id: UserId) inline def value: UUID = id
-  }
+  type AccountId = AccountId.T
+  object AccountId extends RefinedType[UUID, True]
 
-  object AccountId {
-    inline def apply(u: UUID): AccountId = u
-    extension (id: AccountId) inline def value: UUID = id
-  }
+  type WalletId = WalletId.T
+  object WalletId extends RefinedType[UUID, True]
 
-  object WalletId {
-    inline def apply(u: UUID): WalletId = u
-    extension (id: WalletId) inline def value: UUID = id
-  }
+  // ── Market IDs ──
+  type InstrumentId = InstrumentId.T
+  object InstrumentId extends RefinedType[UUID, True]
 
-  object InstrumentId {
-    inline def apply(u: UUID): InstrumentId = u
-    extension (id: InstrumentId) inline def value: UUID = id
-  }
+  type StrategyId = StrategyId.T
+  object StrategyId extends RefinedType[UUID, True]
 
-  object StrategyId {
-    inline def apply(u: UUID): StrategyId = u
-    extension (id: StrategyId) inline def value: UUID = id
-  }
+  type ComponentId = ComponentId.T
+  object ComponentId extends RefinedType[UUID, True]
 
-  object ComponentId {
-    inline def apply(u: UUID): ComponentId = u
-    extension (id: ComponentId) inline def value: UUID = id
-  }
+  // ── Trading IDs ──
+  type OrderId = OrderId.T
+  object OrderId extends RefinedType[UUID, True]
 
-  object OrderId {
-    inline def apply(u: UUID): OrderId = u
-    extension (id: OrderId) inline def value: UUID = id
-  }
+  type TradeId = TradeId.T
+  object TradeId extends RefinedType[UUID, True]
 
-  object TradeId {
-    inline def apply(u: UUID): TradeId = u
-    extension (id: TradeId) inline def value: UUID = id
-  }
+  type LedgerEntryId = LedgerEntryId.T
+  object LedgerEntryId extends RefinedType[UUID, True]
 
-  object LedgerEntryId {
-    inline def apply(u: UUID): LedgerEntryId = u
-    extension (id: LedgerEntryId) inline def value: UUID = id
-  }
+  // ── Content/Community IDs ──
+  type ProjectId = ProjectId.T
+  object ProjectId extends RefinedType[UUID, True]
 
-  object ProjectId {
-    inline def apply(u: UUID): ProjectId = u
-    extension (id: ProjectId) inline def value: UUID = id
-  }
+  type DonationId = DonationId.T
+  object DonationId extends RefinedType[UUID, True]
 
-  object DonationId {
-    inline def apply(u: UUID): DonationId = u
-    extension (id: DonationId) inline def value: UUID = id
-  }
-
-  object PostId {
-    inline def apply(u: UUID): PostId = u
-    extension (id: PostId) inline def value: UUID = id
-  }
+  type PostId = PostId.T
+  object PostId extends RefinedType[UUID, True]
 
 }
