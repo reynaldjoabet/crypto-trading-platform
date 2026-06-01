@@ -11,7 +11,7 @@ import trading.api.client.ClientRoutes
 import trading.auth.{Auth, JwkProvider, JwtClaims}
 import trading.custody.Custody
 import trading.domain.AppError
-import trading.domain.user.{Principal, Role, Tier, KycStatus, User}
+import trading.domain.user.{Principal, Role, Tier, KycStatus, User, DisplayName, CountryIso}
 import trading.domain.ids.UserId
 import trading.domain.addresses.Email
 import trading.exchanges.{BinanceClient, ExchangeClient, KrakenClient, MockExchange}
@@ -20,7 +20,6 @@ import trading.orders.OrderService
 import trading.persistence.*
 import trading.strategies.StrategyService
 import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.all.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.middleware.{ErrorAction, ErrorHandling, Logger as HttpLogger}
@@ -131,13 +130,10 @@ object Main extends IOApp.Simple {
               uid <- UUIDGen[F].randomUUID
               now <- Clock[F].realTimeInstant
               email = claims.email
-                .flatMap(Email(_).toOption)
-                .getOrElse(Email.unsafe(s"unknown-${uid.toString.take(8)}@local"))
+                .flatMap(Email.option(_))
+                .getOrElse(Email.applyUnsafe(s"unknown-${uid.toString.take(8)}@local"))
               name = claims.name.getOrElse("Anonymous")
-              refined = name
-                .refineEither[Not[Empty] & MaxLength[80]]
-                .toOption
-                .getOrElse("User".refineUnsafe[Not[Empty] & MaxLength[80]])
+              displayName = DisplayName.option(name).getOrElse(DisplayName.applyUnsafe("User"))
               role = {
                 if claims.roles.contains("super-admin") then Role.SuperAdmin
                 else if claims.roles.contains("admin") then Role.Admin
@@ -146,12 +142,12 @@ object Main extends IOApp.Simple {
               user = User(
                 id = UserId(uid),
                 email = email,
-                displayName = refined,
+                displayName = displayName,
                 role = role,
                 tier = Tier.Bronze,
                 kyc = KycStatus.NotStarted,
                 externalSubject = claims.sub,
-                countryIso = "US".refineUnsafe,
+                countryIso = CountryIso.applyUnsafe("US"),
                 createdAt = now,
                 updatedAt = now
               )

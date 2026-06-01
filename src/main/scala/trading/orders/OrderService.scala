@@ -63,7 +63,7 @@ object OrderService {
             createdAt = now
           )
           // Pre-trade reservation: lock notional in the user's trading account.
-          notional = notionalFor(intent, inst)
+          notional = notionalFor(intent)
           _ <- notional.fold(Async[F].unit)(amt =>
             // We don't have userId here; accounts are user-scoped via AccountId. In a
             // real impl, we'd look up the user from AccountId. Skipped in this slice.
@@ -139,8 +139,8 @@ object OrderService {
         orders.applyFill(ord.intent.id, f.quantity.value, Some(f.price.value), now)
       }
 
-      private def notionalFor(intent: OrderIntent, inst: Instrument): Option[Amount] = {
-        intent.limitPrice.map(p => (p.value * intent.quantity.value).abs).flatMap(v => Amount(v).toOption)
+      private def notionalFor(intent: OrderIntent /*inst: Instrument*/ ): Option[Amount] = {
+        intent.limitPrice.map(p => (p.value * intent.quantity.value).abs).flatMap(v => Amount.option(v))
       }
     }
   }

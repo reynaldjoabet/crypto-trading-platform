@@ -32,7 +32,7 @@ object Custody {
     new Custody[F] {
       def transferOut(to: WalletAddress, amount: Amount, ccy: CurrencyCode, externalId: String): F[String] = {
         Logger[F].info(
-          s"[FIREBLOCKS STUB] transfer ${amount.value} ${ccy: String} → $to (extId=$externalId)"
+          s"[FIREBLOCKS STUB] transfer ${amount.value} ${ccy.value} → $to (extId=$externalId)"
         ) *>
           Async[F].raiseError(AppError.Upstream("FIREBLOCKS", "transferOut not implemented"))
       }

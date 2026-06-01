@@ -36,10 +36,10 @@ object MockExchange {
           for {
             now <- Clock[F].realTimeInstant
             drift <- rng.nextDouble.map(d => 1.0 + (d - 0.5) * 0.001) // ±5 bps
-            px <- Async[F].pure(Price.unsafe(BigDecimal(100) * drift))
-            qty <- Async[F].pure(Quantity.unsafe(BigDecimal(1)))
-            fee <- Async[F].pure(Amount.unsafe(BigDecimal("0.10")))
-          } yield List(VenueFill(s"$venueOrderId-fill-1", px, qty, fee, CurrencyCode.unsafe("USD"), now))
+            px <- Async[F].pure(Price.applyUnsafe(BigDecimal(100) * drift))
+            qty <- Async[F].pure(Quantity.applyUnsafe(BigDecimal(1)))
+            fee <- Async[F].pure(Amount.applyUnsafe(BigDecimal("0.10")))
+          } yield List(VenueFill(s"$venueOrderId-fill-1", px, qty, fee, CurrencyCode.applyUnsafe("USD"), now))
         }
       }
     }

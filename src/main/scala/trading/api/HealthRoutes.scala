@@ -14,8 +14,8 @@ import org.http4s.dsl.Http4sDsl
   *     pull the instance out of rotation instead of routing failing traffic.
   */
 object HealthRoutes {
-  private given CanEqual[Method, Method] = CanEqual.derived
-  private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
+  // private given CanEqual[Method, Method] = CanEqual.derived
+  // private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
 
   def routes[F[_]: Concurrent](dbPing: F[Unit]): HttpRoutes[F] = {
     val dsl = Http4sDsl[F]

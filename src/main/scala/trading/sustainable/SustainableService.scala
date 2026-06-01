@@ -1,7 +1,6 @@
 package trading.sustainable
 
 import cats.effect.*
-import cats.effect.std.UUIDGen
 import trading.domain.AppError
 import trading.domain.ids.DonationId
 import trading.domain.ids.ProjectId
@@ -37,7 +36,7 @@ trait SustainableService[F[_]] {
 }
 
 object SustainableService {
-  def stub[F[_]: Sync: UUIDGen]: SustainableService[F] = {
+  def stub[F[_]: Sync]: SustainableService[F] = {
     new SustainableService[F] {
       def listProjects: F[List[SustainableProject]] = {
         Sync[F].pure(List.empty)

@@ -34,7 +34,7 @@ object InstrumentService {
         for {
           existing <- repo.findBySymbol(symbol)
           _ <- existing.fold(Sync[F].unit)(_ =>
-            Sync[F].raiseError[Unit](AppError.Conflict(s"symbol ${symbol: String} exists"))
+            Sync[F].raiseError[Unit](AppError.Conflict(s"symbol ${symbol.value} exists"))
           )
           uid <- UUIDGen[F].randomUUID
           now <- Clock[F].realTimeInstant
