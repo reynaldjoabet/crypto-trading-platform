@@ -2,13 +2,11 @@ package trading.persistence
 
 import cats.effect.*
 import cats.syntax.all.*
-import io.github.iltotore.iron.*
-import io.github.iltotore.iron.constraint.all.*
 import trading.domain.ids.{ComponentId, StrategyId}
 import trading.domain.strategy.*
-import _root_.skunk.*
-import _root_.skunk.codec.all.*
-import _root_.skunk.implicits.*
+import skunk.*
+import skunk.codec.all.*
+import skunk.implicits.*
 
 trait StrategyRepo[F[_]] {
   def listPublished: F[List[Strategy]]
@@ -38,12 +36,12 @@ object StrategyRepo {
       comps: List[ComponentId]
   ): Strategy = {
     val (id, name, sym, dd, lev, mf, pf, risk, pub, c, u) = t
-    val rname = name.refineUnsafe[Not[Empty] & MaxLength[120]]
-    val rlev = lev.refineUnsafe[GreaterEqual[1] & LessEqual[25]]
+    val rname = StrategyName.applyUnsafe(name)
+    val rlev = MaxLeverage.applyUnsafe(lev)
     Strategy(id, rname, sym, comps, dd, rlev, mf, pf, risk, pub, c, u)
   }
 
-  private val Q_LIST_PUB: Query[
+  private val selectPublished: Query[
     Void,
     (
         StrategyId,
@@ -64,8 +62,7 @@ object StrategyRepo {
           FROM strategies WHERE is_published = true ORDER BY updated_at DESC""".query(strategyRow)
   }
 
-  private val Q_BY_ID = Q_LIST_PUB // placeholder; real impl below
-  private val Q_BY_ID_REAL: Query[
+  private val selectById: Query[
     StrategyId,
     (
         StrategyId,
@@ -86,12 +83,12 @@ object StrategyRepo {
           FROM strategies WHERE id = $strategyIdC""".query(strategyRow)
   }
 
-  private val Q_COMPS_FOR_STRATEGY: Query[StrategyId, ComponentId] = {
+  private val selectComponentIds: Query[StrategyId, ComponentId] = {
     sql"""SELECT component_id FROM strategy_component_links
           WHERE strategy_id = $strategyIdC ORDER BY position""".query(componentIdC)
   }
 
-  private val C_UPSERT_STRAT: Command[
+  private val upsertStrategy: Command[
     (
         StrategyId,
         String,
@@ -120,21 +117,21 @@ object StrategyRepo {
             updated_at = EXCLUDED.updated_at""".command
   }
 
-  private val C_DELETE_LINKS: Command[StrategyId] = {
+  private val deleteComponentLinks: Command[StrategyId] = {
     sql"DELETE FROM strategy_component_links WHERE strategy_id = $strategyIdC".command
   }
 
-  private val C_INSERT_LINK: Command[(StrategyId, ComponentId, Int)] = {
+  private val insertComponentLink: Command[(StrategyId, ComponentId, Int)] = {
     sql"""INSERT INTO strategy_component_links (strategy_id, component_id, position)
           VALUES ($strategyIdC, $componentIdC, $int4)""".command
   }
 
-  private val Q_LIST_COMP: Query[Void, StrategyComponent] = {
+  private val selectComponents: Query[Void, StrategyComponent] = {
     sql"""SELECT id, name, indicator, params::text, is_active, created_at
           FROM strategy_components ORDER BY name""".query(componentCodec)
   }
 
-  private val C_UPSERT_COMP: Command[(ComponentId, String, Indicator, String, Boolean, java.time.Instant)] = {
+  private val upsertComponentCmd: Command[(ComponentId, String, Indicator, String, Boolean, java.time.Instant)] = {
     sql"""INSERT INTO strategy_components (id, name, indicator, params, is_active, created_at)
           VALUES ($componentIdC, $text, $indicatorC, ${text}::jsonb, $bool, $instantTz)
           ON CONFLICT (id) DO UPDATE SET
@@ -149,19 +146,18 @@ object StrategyRepo {
       def listPublished: F[List[Strategy]] = {
         pool.use { s =>
           for {
-            rows <- s.execute(Q_LIST_PUB)
-            comps <- rows.traverse(r => s.prepare(Q_COMPS_FOR_STRATEGY).flatMap(_.stream(r._1, 32).compile.toList))
+            rows <- s.execute(selectPublished)
+            comps <- rows.traverse(r => s.prepare(selectComponentIds).flatMap(_.stream(r._1, 32).compile.toList))
           } yield rows.zip(comps).map(hydrateStrategy)
         }
       }
 
       def find(id: StrategyId): F[Option[Strategy]] = {
         pool.use { s =>
-          val _ = Q_BY_ID // suppress unused-private warning if it appears
-          s.prepare(Q_BY_ID_REAL).flatMap(_.option(id)).flatMap {
+          s.prepare(selectById).flatMap(_.option(id)).flatMap {
             case None    => Option.empty[Strategy].pure[F]
             case Some(r) => {
-              s.prepare(Q_COMPS_FOR_STRATEGY)
+              s.prepare(selectComponentIds)
                 .flatMap(_.stream(id, 32).compile.toList)
                 .map(cs => Some(hydrateStrategy(r, cs)))
             }
@@ -174,10 +170,10 @@ object StrategyRepo {
           s.transaction.use { _ =>
             val tup = (
               strat.id,
-              (strat.name: String),
+              strat.name.value,
               strat.symbol,
               strat.maxDrawdown,
-              (strat.maxLeverage: Int),
+              strat.maxLeverage.value,
               strat.managementFee,
               strat.performanceFee,
               strat.risk,
@@ -186,9 +182,9 @@ object StrategyRepo {
               strat.updatedAt
             )
             for {
-              _ <- s.prepare(C_UPSERT_STRAT).flatMap(_.execute(tup))
-              _ <- s.prepare(C_DELETE_LINKS).flatMap(_.execute(strat.id))
-              _ <- s.prepare(C_INSERT_LINK).flatMap { pc =>
+              _ <- s.prepare(upsertStrategy).flatMap(_.execute(tup))
+              _ <- s.prepare(deleteComponentLinks).flatMap(_.execute(strat.id))
+              _ <- s.prepare(insertComponentLink).flatMap { pc =>
                 strat.components.zipWithIndex.traverse_((cid, i) => pc.execute((strat.id, cid, i)))
               }
             } yield ()
@@ -197,14 +193,14 @@ object StrategyRepo {
       }
 
       def listComponents: F[List[StrategyComponent]] = {
-        pool.use(_.execute(Q_LIST_COMP))
+        pool.use(_.execute(selectComponents))
       }
 
       def upsertComponent(c: StrategyComponent): F[Unit] = {
         pool.use { s =>
           val tup =
-            (c.id, (c.name: String), c.indicator, Codecs.serializeParams(c.params), c.isActive, c.createdAt)
-          s.prepare(C_UPSERT_COMP).flatMap(_.execute(tup)).void
+            (c.id, c.name.value, c.indicator, Codecs.serializeParams(c.params), c.isActive, c.createdAt)
+          s.prepare(upsertComponentCmd).flatMap(_.execute(tup)).void
         }
       }
     }

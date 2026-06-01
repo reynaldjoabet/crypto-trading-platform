@@ -19,12 +19,12 @@ trait AccountRepo[F[_]] {
 
 object AccountRepo {
   import Codecs.*
-  private val Q_BY_ID: Query[AccountId, Account] = {
+  private val selectById: Query[AccountId, Account] = {
     sql"""SELECT id, user_id, kind, currency, created_at
           FROM accounts WHERE id = $accountIdC""".query(accountCodec)
   }
 
-  private val Q_BY_TRIPLE: Query[(Option[UserId], AccountKind, CurrencyCode), Account] = {
+  private val selectByOwnerKindCurrency: Query[(Option[UserId], AccountKind, CurrencyCode), Account] = {
     sql"""SELECT id, user_id, kind, currency, created_at
           FROM accounts
           WHERE user_id IS NOT DISTINCT FROM ${userIdC.opt}
@@ -32,20 +32,20 @@ object AccountRepo {
             AND currency = $currencyC""".query(accountCodec)
   }
 
-  private val C_INSERT
+  private val insertAccount
       : Command[(AccountId, Option[UserId], AccountKind, trading.domain.money.CurrencyCode, java.time.Instant)] = {
     sql"""INSERT INTO accounts (id, user_id, kind, currency, created_at)
           VALUES ($accountIdC, ${userIdC.opt}, $accountKindC, $currencyC, $instantTz)""".command
   }
 
-  private val C_POST: Command[LedgerEntry] = {
+  private val insertLedgerEntry: Command[LedgerEntry] = {
     sql"""INSERT INTO ledger_entries
             (id, account_id, direction, amount, currency, reference, posted_at)
           VALUES ($entryCodec)""".command
   }
 
   // Available balance = sum(credits) - sum(debits) for the (account, currency) pair.
-  private val Q_BALANCE: Query[(AccountId, CurrencyCode), BigDecimal] = {
+  private val selectBalance: Query[(AccountId, CurrencyCode), BigDecimal] = {
     sql"""SELECT COALESCE(SUM(
               CASE direction WHEN 'Credit' THEN amount ELSE -amount END
             ), 0)::numeric
@@ -58,19 +58,21 @@ object AccountRepo {
   ): AccountRepo[F] = {
     new AccountRepo[F] {
       def find(id: AccountId): F[Option[Account]] = {
-        pool.use(_.prepare(Q_BY_ID).flatMap(_.option(id)))
+        pool.use(_.prepare(selectById).flatMap(_.option(id)))
       }
 
       def findOrCreate(userId: Option[UserId], kind: AccountKind, ccy: CurrencyCode): F[Account] = {
         pool.use { s =>
-          s.prepare(Q_BY_TRIPLE).flatMap(_.option((userId, kind, ccy))).flatMap {
+          s.prepare(selectByOwnerKindCurrency).flatMap(_.option((userId, kind, ccy))).flatMap {
             case Some(a) => a.pure[F]
             case None    => {
               for {
                 now <- Clock[F].realTimeInstant
                 id <- cats.effect.std.UUIDGen[F].randomUUID
                 acc = Account(AccountId(id), userId, kind, ccy, now)
-                _ <- s.prepare(C_INSERT).flatMap(_.execute((acc.id, acc.userId, acc.kind, acc.currency, acc.createdAt)))
+                _ <- s
+                  .prepare(insertAccount)
+                  .flatMap(_.execute((acc.id, acc.userId, acc.kind, acc.currency, acc.createdAt)))
               } yield acc
             }
           }
@@ -82,13 +84,13 @@ object AccountRepo {
         // bare Session — we use `transaction.use` to ensure rollback on any failure.
         pool.use { s =>
           s.transaction.use { _ =>
-            s.prepare(C_POST).flatMap(pc => entries.traverse_(pc.execute))
+            s.prepare(insertLedgerEntry).flatMap(pc => entries.traverse_(pc.execute))
           }
         }
       }
 
       def balance(id: AccountId, ccy: CurrencyCode): F[Balance] = {
-        pool.use(_.prepare(Q_BALANCE).flatMap(_.unique((id, ccy)))).map { net =>
+        pool.use(_.prepare(selectBalance).flatMap(_.unique((id, ccy)))).map { net =>
           Balance(id, ccy, available = net, pending = BigDecimal(0))
         }
       }

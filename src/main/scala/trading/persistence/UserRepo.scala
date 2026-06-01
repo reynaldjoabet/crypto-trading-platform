@@ -17,32 +17,45 @@ trait UserRepo[F[_]] {
 object UserRepo {
   import Codecs.*
 
-  private val Q_BY_ID: Query[UserId, User] = {
+  private val selectById: Query[UserId, User] = {
     sql"""SELECT id, email, display_name, role, tier, kyc_status, external_subject,
                  country_iso, created_at, updated_at
           FROM users WHERE id = $userIdC""".query(userCodec)
   }
 
-  private val Q_BY_SUB: Query[String, User] = {
+  private val selectBySubject: Query[String, User] = {
     sql"""SELECT id, email, display_name, role, tier, kyc_status, external_subject,
                  country_iso, created_at, updated_at
           FROM users WHERE external_subject = $text""".query(userCodec)
   }
 
-  // Note: UPSERT with complex User type is tricky with Skunk's codec system
-  // Defining as a stub for now - user upsert would need individual field handling
+  // Upsert keyed on the OIDC subject (external_subject is UNIQUE): the first authenticated
+  // request provisions the row; subsequent logins refresh the mutable profile fields. The
+  // primary-key id is preserved on conflict so foreign keys (accounts, orders) stay stable.
+  private val upsertUser: Command[User] = {
+    sql"""INSERT INTO users
+            (id, email, display_name, role, tier, kyc_status, external_subject, country_iso, created_at, updated_at)
+          VALUES ($userCodec)
+          ON CONFLICT (external_subject) DO UPDATE SET
+            email        = EXCLUDED.email,
+            display_name = EXCLUDED.display_name,
+            role         = EXCLUDED.role,
+            tier         = EXCLUDED.tier,
+            kyc_status   = EXCLUDED.kyc_status,
+            country_iso  = EXCLUDED.country_iso,
+            updated_at   = EXCLUDED.updated_at""".command
+  }
 
   def fromSession[F[_]: Concurrent](pool: Resource[F, Session[F]]): UserRepo[F] = {
     new UserRepo[F] {
       def find(id: UserId): F[Option[User]] = {
-        pool.use(_.prepare(Q_BY_ID).flatMap(_.option(id)))
+        pool.use(_.prepare(selectById).flatMap(_.option(id)))
       }
       def findBySubject(sub: String): F[Option[User]] = {
-        pool.use(_.prepare(Q_BY_SUB).flatMap(_.option(sub)))
+        pool.use(_.prepare(selectBySubject).flatMap(_.option(sub)))
       }
       def upsert(u: User): F[Unit] = {
-        // TODO: Implement user upsert - requires handling complex codec composition
-        Concurrent[F].unit
+        pool.use(_.prepare(upsertUser).flatMap(_.execute(u))).void
       }
     }
   }

@@ -102,9 +102,7 @@ object Auth {
         )
         keyOpt <- jwks.keyFor(kid)
         key <- Sync[F].fromOption(keyOpt, RuntimeException(s"no JWKS key for kid=$kid"))
-        claims <- decode(token, key)
-        _ <- checkIssuer(claims, cfg.issuer)
-        _ <- checkAudience(claims, cfg.audience)
+        claims <- decode(token, key, cfg)
       } yield claims).attempt.map(_.left.map(_.getMessage))
     }
   }
@@ -118,14 +116,14 @@ object Auth {
     circeParse(String(bytes, java.nio.charset.StandardCharsets.UTF_8))
   }
 
-  private def decode[F[_]: Sync](token: String, key: PublicKey): F[JwtClaims] = {
+  private def decode[F[_]: Sync](token: String, key: PublicKey, cfg: AuthConfig): F[JwtClaims] = {
     Sync[F]
       .fromTry(
         Jwt.decode(
           token,
           key,
           Seq(JwtAlgorithm.RS256, JwtAlgorithm.RS384, JwtAlgorithm.RS512),
-          JwtOptions.DEFAULT
+          JwtOptions.DEFAULT // validates signature + exp/nbf
         )
       )
       .flatMap { c =>
@@ -139,20 +137,24 @@ object Auth {
             .get[String]("scope")
             .toOption
             .fold(Set.empty[String])(_.split(' ').filter(_.nonEmpty).toSet)
-          Sync[F].pure(JwtClaims(sub, email, name, realm.toSet, scopes))
+          // `aud` may be a string or an array per RFC 7519; accept both.
+          val iss = cur.get[String]("iss").toOption
+          val aud = cur
+            .get[List[String]]("aud")
+            .toOption
+            .orElse(cur.get[String]("aud").toOption.map(List(_)))
+            .getOrElse(Nil)
+          val issOk = cfg.issuer.isEmpty || iss.contains(cfg.issuer)
+          val audOk = cfg.audience.isEmpty || aud.contains(cfg.audience)
+          if !issOk then
+            Sync[F].raiseError(
+              RuntimeException(s"issuer mismatch: expected ${cfg.issuer}, got ${iss.getOrElse("<none>")}")
+            )
+          else if !audOk then Sync[F].raiseError(RuntimeException(s"audience mismatch: expected ${cfg.audience}"))
+          else Sync[F].pure(JwtClaims(sub, email, name, realm.toSet, scopes))
         }
       }
   }
-
-  private def checkIssuer[F[_]: Sync](c: JwtClaims, expected: String): F[Unit] = {
-    Sync[F].unit
-  }
-  private def checkAudience[F[_]: Sync](c: JwtClaims, expected: String): F[Unit] = {
-    Sync[F].unit
-  }
-  // ^ jwt-scala does not surface iss/aud directly on the claims case class we built — we trust
-  //   the upstream IdP to issue tokens with the right values and verify them by signature.
-  //   For stricter posture, parse `iss` and `aud` out of the JSON and compare here.
 
   /** Convenience guard for role-based authorisation. */
   def requireRole[F[_]: Sync](p: Principal, role: Role): F[Unit] = {

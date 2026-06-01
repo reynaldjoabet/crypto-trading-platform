@@ -19,35 +19,34 @@ trait InstrumentRepo[F[_]] {
 object InstrumentRepo {
   import Codecs.*
 
-  private val all: Codec[Instrument] = {
+  private val instrumentCodec: Codec[Instrument] = {
     (instrumentIdC *: symbolC *: currencyC *: currencyC *: venueC *: bool *: instantTz)
       .imap(Instrument.apply.tupled)(i => (i.id, i.symbol, i.base, i.quote, i.venue, i.isActive, i.createdAt))
   }
 
-  private val Q_LIST_ALL: Query[Void, Instrument] = {
-    sql"SELECT id, symbol, base, quote, venue, is_active, created_at FROM instruments ORDER BY symbol".query(
-      all
-    )
+  private val selectAll: Query[Void, Instrument] = {
+    sql"SELECT id, symbol, base, quote, venue, is_active, created_at FROM instruments ORDER BY symbol"
+      .query(instrumentCodec)
   }
 
-  private val Q_LIST_ACTIVE: Query[Void, Instrument] = {
+  private val selectActive: Query[Void, Instrument] = {
     sql"""SELECT id, symbol, base, quote, venue, is_active, created_at
-          FROM instruments WHERE is_active = true ORDER BY symbol""".query(all)
+          FROM instruments WHERE is_active = true ORDER BY symbol""".query(instrumentCodec)
   }
 
-  private val Q_BY_ID: Query[InstrumentId, Instrument] = {
+  private val selectById: Query[InstrumentId, Instrument] = {
     sql"""SELECT id, symbol, base, quote, venue, is_active, created_at
-          FROM instruments WHERE id = $instrumentIdC""".query(all)
+          FROM instruments WHERE id = $instrumentIdC""".query(instrumentCodec)
   }
 
-  private val Q_BY_SYMBOL: Query[Symbol, Instrument] = {
+  private val selectBySymbol: Query[Symbol, Instrument] = {
     sql"""SELECT id, symbol, base, quote, venue, is_active, created_at
-          FROM instruments WHERE symbol = $symbolC""".query(all)
+          FROM instruments WHERE symbol = $symbolC""".query(instrumentCodec)
   }
 
-  private val C_UPSERT: Command[Instrument] = {
+  private val upsertInstrument: Command[Instrument] = {
     sql"""INSERT INTO instruments (id, symbol, base, quote, venue, is_active, created_at)
-          VALUES (${all})
+          VALUES ($instrumentCodec)
           ON CONFLICT (id) DO UPDATE SET
             symbol = EXCLUDED.symbol,
             base   = EXCLUDED.base,
@@ -56,30 +55,30 @@ object InstrumentRepo {
             is_active = EXCLUDED.is_active""".command
   }
 
-  private val C_SET_ACTIVE: Command[(Boolean, InstrumentId)] = {
+  private val updateActive: Command[(Boolean, InstrumentId)] = {
     sql"UPDATE instruments SET is_active = $bool WHERE id = $instrumentIdC".command
   }
 
   def fromSession[F[_]: Concurrent](pool: Resource[F, Session[F]]): InstrumentRepo[F] = {
     new InstrumentRepo[F] {
       def list(activeOnly: Boolean): F[List[Instrument]] = {
-        pool.use(_.execute(if activeOnly then Q_LIST_ACTIVE else Q_LIST_ALL))
+        pool.use(_.execute(if activeOnly then selectActive else selectAll))
       }
 
       def find(id: InstrumentId): F[Option[Instrument]] = {
-        pool.use(_.prepare(Q_BY_ID).flatMap(_.option(id)))
+        pool.use(_.prepare(selectById).flatMap(_.option(id)))
       }
 
       def findBySymbol(s: Symbol): F[Option[Instrument]] = {
-        pool.use(_.prepare(Q_BY_SYMBOL).flatMap(_.option(s)))
+        pool.use(_.prepare(selectBySymbol).flatMap(_.option(s)))
       }
 
       def upsert(i: Instrument): F[Unit] = {
-        pool.use(_.prepare(C_UPSERT).flatMap(_.execute(i))).void
+        pool.use(_.prepare(upsertInstrument).flatMap(_.execute(i))).void
       }
 
       def setActive(id: InstrumentId, active: Boolean): F[Unit] = {
-        pool.use(_.prepare(C_SET_ACTIVE).flatMap(_.execute((active, id)))).void
+        pool.use(_.prepare(updateActive).flatMap(_.execute((active, id)))).void
       }
     }
   }

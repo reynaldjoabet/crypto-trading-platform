@@ -7,6 +7,8 @@ import org.typelevel.otel4s.metrics.Meter.Implicits.noop
 import org.flywaydb.core.Flyway
 import org.typelevel.log4cats.Logger
 import skunk.Session
+import skunk.implicits.*
+import skunk.codec.all.int4
 import cats.effect.std.Console
 import scala.concurrent.duration.*
 import fs2.io.net.Network
@@ -41,16 +43,26 @@ object Database {
       .flatTap(n => Logger[F].info(s"Flyway applied $n migration(s)"))
   }
 
-  /** A skunk session pool. */
+  /** A skunk session pool wired from [[DbConfig]]. */
   def pool[F[_]: Async: Logger: Console: Network](
       cfg: DbConfig
   ): Resource[F, Resource[F, Session[F]]] = {
     Session
       .Builder[F]
-      .pooled(
-        max = cfg.poolSize
+      .withHost(cfg.host)
+      .withPort(cfg.port)
+      .withUserAndPassword(cfg.user, cfg.password)
+      .withDatabase(cfg.database)
+      .withReadTimeout(cfg.connectTimeout)
+      .pooled(max = cfg.poolSize)
+      .evalTap(_ =>
+        Logger[F].info(s"Postgres pool ready (host=${cfg.host}:${cfg.port} db=${cfg.database} size=${cfg.poolSize})")
       )
-      .evalTap(_ => Logger[F].info(s"Postgres pool ready (size=${cfg.poolSize})"))
+  }
+
+  /** Liveness probe for the DB: a trivial round-trip that fails if the pool can't serve a session. */
+  def ping[F[_]: Concurrent](pool: Resource[F, Session[F]]): F[Unit] = {
+    pool.use(_.unique(sql"SELECT 1".query(int4))).void
   }
 
 }

@@ -100,7 +100,7 @@ object ClientRoutes {
       }
 
       case GET -> Root / "balance" / currency as p => {
-        CurrencyCode(currency) match {
+        CurrencyCode.either(currency) match {
           case Left(reason) => BadRequest(AppError.Validation("currency", reason).asJson)
           case Right(ccy)   => {
             accounts.balance(p.user.id, ccy).flatMap { b =>
