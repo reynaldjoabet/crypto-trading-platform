@@ -14,9 +14,13 @@ ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
   "-feature",
   "-unchecked",
+  "-explain", // + actionable error messages
+  "-source:3.3", // + pin source level, no silent drift
   "-Wunused:all",
   "-Wvalue-discard",
   "-Wnonunit-statement",
+  "-Ysafe-init",
+  "-language:strictEquality", // + catch nonsensical == (Money vs String, etc.)
   "-Ykind-projector",
   "-Xmax-inlines",
   "64"

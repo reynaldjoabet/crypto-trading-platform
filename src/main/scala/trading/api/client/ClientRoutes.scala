@@ -23,8 +23,8 @@ import org.typelevel.log4cats.Logger
 import org.http4s.circe.CirceEntityDecoder.circeEntityDecoder
 object ClientRoutes {
 
-  // private given CanEqual[Method, Method] = CanEqual.derived
-  // private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
+  private given CanEqual[Method, Method] = CanEqual.derived
+  private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
 
   final case class PlaceOrderBody(
       accountId: AccountId,

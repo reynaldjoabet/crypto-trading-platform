@@ -18,8 +18,8 @@ import org.typelevel.log4cats.Logger
 
 object AdminRoutes {
 
-  // private given CanEqual[Method, Method] = CanEqual.derived
-  // private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
+  private given CanEqual[Method, Method] = CanEqual.derived
+  private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
 
   def routes[F[_]: Async: Logger](
       authMw: AuthMiddleware[F, Principal],
