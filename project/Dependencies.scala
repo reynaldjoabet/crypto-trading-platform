@@ -1,47 +1,48 @@
 import sbt.*
 
-object Dependencies:
+object Dependencies {
 
-  private object V:
+  private object V {
     val iron = "3.3.1"
     val skunk = "1.1.0-RC1"
     val http4s = "0.23.34"
     val circe = "0.14.15"
     val ce = "3.7.0"
     val log4cats = "2.8.0"
-    val logback = "1.5.32"
-    val munit = "1.3.0"
+    val logback = "1.5.34"
+    val munit = "1.3.2"
     val munitCE = "2.2.0"
-    val jsoniter = "2.38.12"
+    val jsoniter = "2.38.14"
     val fs2 = "3.13.0"
     val fs2Kafka = "4.0.0"
     val chimney = "1.10.0"
-    val hedgehog = "0.13.0"
+    val hedgehog = "0.13.1"
     val scalacheck = "1.19.0"
     val hikaricp = "7.0.2"
-    val flyway = "12.6.2"
+    val flyway = "12.8.1"
     val postgres = "42.7.11"
     val bouncycastle = "1.84"
     val password4j = "1.8.4"
     val auth0 = "4.5.2"
-    val nimbusJoseJwt = "10.9"
+    val nimbusJoseJwt = "10.9.1"
     val nimbusOauth2Oidc = "11.37.2"
     val vault = "5.1.0"
     val jwtScala = "11.0.4"
     // --- Cache ---
     val caffeine = "3.2.4"
-    val redisson = "3.39.0"
+    val redisson = "4.5.0"
 
     // --- Observability ---
     val datadog = "2.55.0"
     val kamon = "2.8.1"
-    val otel4s = "0.16.0"
+    val otel4s = "0.16.0" // pinned: skunk-core 1.1.0-RC1 requires 0.16.0 (1.0.0 is binary-incompatible)
 
     // --- Config ---
-    val pureconfig = "0.17.9"
+    val pureconfig = "0.17.10"
 
     // --- HTTP clients ---
-    val sttp = "3.10.2"
+    val sttp = "4.0.25"
+  }
 
   val all: Seq[ModuleID] = Seq(
     "io.github.iltotore" %% "iron" % V.iron,
@@ -94,10 +95,10 @@ object Dependencies:
     "com.github.pureconfig" %% "pureconfig-generic-scala3" % V.pureconfig,
     "io.github.iltotore" %% "iron-pureconfig" % V.iron,
     // HTTP clients (exchange / custody)
-    "com.softwaremill.sttp.client3" %% "core" % V.sttp,
-    "com.softwaremill.sttp.client3" %% "cats" % V.sttp,
-    "com.softwaremill.sttp.client3" %% "http4s-backend" % V.sttp,
-    "com.softwaremill.sttp.client3" %% "circe" % V.sttp,
+    "com.softwaremill.sttp.client4" %% "core" % V.sttp,
+    "com.softwaremill.sttp.client4" %% "cats" % V.sttp,
+    "com.softwaremill.sttp.client4" %% "http4s-backend" % V.sttp,
+    "com.softwaremill.sttp.client4" %% "circe" % V.sttp,
     // Testing
     "org.scalameta" %% "munit" % V.munit % Test,
     "org.typelevel" %% "munit-cats-effect" % V.munitCE % Test,
@@ -105,3 +106,4 @@ object Dependencies:
     "qa.hedgehog" %% "hedgehog-sbt" % V.hedgehog % Test,
     "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
   )
+}

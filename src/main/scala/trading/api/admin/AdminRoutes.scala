@@ -15,11 +15,9 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.AuthMiddleware
 import io.circe.syntax.*
 import org.typelevel.log4cats.Logger
+import trading.api.given
 
 object AdminRoutes {
-
-  private given CanEqual[Method, Method] = CanEqual.derived
-  private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
 
   def routes[F[_]: Async: Logger](
       authMw: AuthMiddleware[F, Principal],

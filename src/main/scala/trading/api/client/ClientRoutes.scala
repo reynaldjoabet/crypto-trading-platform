@@ -21,10 +21,8 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.AuthMiddleware
 import org.typelevel.log4cats.Logger
 import org.http4s.circe.CirceEntityDecoder.circeEntityDecoder
+import trading.api.given
 object ClientRoutes {
-
-  private given CanEqual[Method, Method] = CanEqual.derived
-  private given CanEqual[Uri.Path, Uri.Path] = CanEqual.derived
 
   final case class PlaceOrderBody(
       accountId: AccountId,

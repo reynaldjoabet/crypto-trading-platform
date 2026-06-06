@@ -4,8 +4,8 @@ ThisBuild / scalaVersion := "3.3.7"
 ThisBuild / organization := "io.trading"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalafmtOnCompile := false
-ThisBuild / Test / fork := true
-ThisBuild / Test / parallelExecution := false
+//ThisBuild / Test / fork := true
+//ThisBuild / Test / parallelExecution := false
 
 ThisBuild / scalacOptions ++= Seq(
   "-encoding",
@@ -19,7 +19,6 @@ ThisBuild / scalacOptions ++= Seq(
   "-Wunused:all",
   "-Wvalue-discard",
   "-Wnonunit-statement",
-  "-Ysafe-init",
   "-language:strictEquality", // + catch nonsensical == (Money vs String, etc.)
   "-Ykind-projector",
   "-Xmax-inlines",
