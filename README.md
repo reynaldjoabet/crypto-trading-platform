@@ -185,3 +185,133 @@ given [E]: Functor[Either[E, *]] with
 
 ![alt text](image-1.png)
 
+OpenID Connect is an HTTP/L7 concern, so it does not bolt onto the PostgreSQL TCP load balancer(haproxy mode)
+
+## Option A — APIs: validate the OIDC JWT natively (no extra services)
+Drop this into your HTTP frontend/backend. Clients send Authorization: Bearer <jwt> obtained from your IdP (Keycloak, Auth0, Okta, Entra…).
+
+```cfg
+backend be_api
+    balance leastconn
+    server api1 10.0.2.11:9090 check
+    server api2 10.0.2.12:9090 check
+
+frontend fe_api
+    bind :443 ssl crt /etc/haproxy/certs/ alpn h2,http/1.1
+
+    #--- 1. extract the bearer token ---
+    http-request set-var(txn.bearer) http_auth_bearer
+                                       # http_auth_bearer pulls the token out of
+                                       # "Authorization: Bearer xxx" for you.
+
+    # reject requests with no token outright
+    http-request deny deny_status 401 hdr WWW-Authenticate 'Bearer error="invalid_token"' \
+        unless { var(txn.bearer) -m found }
+
+    #--- 2. pin the algorithm (NEVER trust the token's own alg blindly) ---
+    http-request set-var(txn.alg) var(txn.bearer),jwt_header_query('$.alg')
+    http-request deny deny_status 401 unless { var(txn.alg) -m str RS256 }
+                                       # hard-allowlist RS256. Blocks the classic
+                                       # "alg:none" and HS/RS confusion attacks.
+
+    #--- 3. verify the signature against the IdP public key / JWKS ---
+    http-request set-var(txn.jwt_ok) var(txn.bearer),jwt_verify(txn.alg,"/etc/haproxy/idp-pubkey.pem")
+    http-request deny deny_status 401 unless { var(txn.jwt_ok) -m int 1 }
+                                       # 1 == JWT_VRFY_OK (verified from your source).
+                                       # 0 == bad signature; negatives == errors -> all denied.
+
+    #--- 4. validate the standard claims: iss, aud, exp ---
+    http-request set-var(txn.iss) var(txn.bearer),jwt_payload_query('$.iss')
+    http-request deny deny_status 401 \
+        unless { var(txn.iss) -m str "https://idp.example.com/realms/prod" }
+
+    http-request set-var(txn.aud) var(txn.bearer),jwt_payload_query('$.aud')
+    http-request deny deny_status 401 unless { var(txn.aud) -m str "my-api" }
+
+    # expiry: deny if now() >= exp  (date() returns current epoch seconds)
+    http-request set-var(txn.exp) var(txn.bearer),jwt_payload_query('$.exp','int')
+    http-request deny deny_status 401 if { var(txn.exp),sub(date()) -m int le 0 }
+
+    #--- 5. optional: scope / role-based authorization ---
+    http-request set-var(txn.scope) var(txn.bearer),jwt_payload_query('$.scope')
+    http-request deny deny_status 403 if { path_beg /api/admin } \
+        ! { var(txn.scope) -m sub "admin" }
+
+    #--- 6. pass identity to the backend so the app needn't re-parse ---
+    http-request set-header X-Auth-Subject %[var(txn.bearer),jwt_payload_query('$.sub')]
+    http-request del-header Authorization   # don't leak the raw token upstream if not needed
+
+    default_backend be_api
+```
+Key value notes for Option A
+- `jwt_verify` second arg is a file path to the IdP's public key (RSA) or a cert. HAProxy doesn't fetch JWKS over HTTP automatically — you must export the IdP signing key to a PEM and refresh it on key rotation (cron + curl the JWKS endpoint → convert → reload). This is the main operational cost of the native approach.
+- Always `allowlist alg` before verifying. Skipping step 2 reopens alg:none and algorithm-confusion attacks.
+- `exp` check is on you — `jwt_verify` only checks the signature, not `expiry/issuer/audience`. Steps 3–4 are not optional.
+
+## Option B — Browser login: full OIDC flow via oauth2-proxy (forward auth)
+For human users with no token, you need the redirect flow. Community HAProxy delegates this to oauth2-proxy (a small sidecar that talks OIDC to your IdP and issues a session cookie).
+
+```cfg
+frontend fe_web
+    bind :443 ssl crt /etc/haproxy/certs/ alpn h2,http/1.1
+
+    acl is_authcb path_beg /oauth2/    # oauth2-proxy's own callback & login endpoints
+
+    # always let the auth endpoints reach oauth2-proxy
+    use_backend be_oauth2proxy if is_authcb
+
+    #--- subrequest auth: ask oauth2-proxy "is this session valid?" ---
+    http-request set-var(txn.auth) str(...)  # placeholder
+    # In practice you run an auth-request style check. With native HAProxy the
+    # common pattern is to route ALL traffic through oauth2-proxy in
+    # "reverse-proxy" mode, OR use SPOE/lua for a subrequest. Simplest robust
+    # setup: oauth2-proxy sits in front and forwards to HAProxy, OR HAProxy
+    # forwards unauthenticated users to it:
+
+    # if no valid session cookie, send the user to oauth2-proxy to start login
+    acl has_session req.cook(_oauth2_proxy) -m found
+    http-request redirect location /oauth2/start?rd=%[url,url_enc] if !has_session !is_authcb
+
+    default_backend be_app
+
+backend be_oauth2proxy
+    server oap 127.0.0.1:4180 check    # oauth2-proxy listening locally
+    # oauth2-proxy config (its own file) holds:
+    #   --provider=oidc
+    #   --oidc-issuer-url=https://idp.example.com/realms/prod
+    #   --client-id / --client-secret
+    #   --cookie-secret  (encrypts the session cookie)
+    #   --redirect-url=https://app.example.com/oauth2/callback
+
+backend be_app
+    # oauth2-proxy injects X-Forwarded-User / X-Forwarded-Email headers
+    # once the user is authenticated; your app trusts those.
+    server app1 10.0.1.11:8080 check
+    server app2 10.0.1.12:8080 check
+```    
+
+SSO in front of internal tools / admin dashboards
+Grafana, Kibana, Airflow, Jenkins, RabbitMQ UI, the HAProxy stats page itself — many have weak or no native auth. Put oauth2-proxy + HAProxy in front and you get company SSO + MFA for free on apps that never knew about OIDC. This is the single most common production use.
+
+
+Under the OBIE/Berlin Group model, AISP (accounts), PISP (payments), CBPII (funds), and consents are distinct API specs — often distinct microservices, deployed and scaled independently. One backend = one pool of servers. If payments and accounts run on different hosts, they have to be separate backends
+
+
+### Retry safety differs (the most important one)
+This is the line that really forces the split:
+```cfg
+backend payments_backend
+    retry-on none        # never auto-retry — a payment is non-idempotent
+```
+
+Accounts/consents are reads → safe to retry and redispatch on failure. Payments are money movement → an accidental retry could double-charge. You can't express "retry these but not those" in a single backend; the retry policy is per-backend.
+
+### Health checks point at different services
+Each backend health-checks its own upstream:
+```cfg
+http-check send meth GET uri /health hdr Host payments.internal
+```
+A unified backend would mark a server up/down based on one service's health, even though it's fronting four.
+
+### Independent failure isolation & capacity
+
