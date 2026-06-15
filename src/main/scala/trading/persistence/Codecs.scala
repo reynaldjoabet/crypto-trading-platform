@@ -13,6 +13,7 @@ import trading.domain.money.*
 import trading.domain.strategy.*
 import trading.domain.market.*
 import trading.domain.user.*
+import trading.domain.user.User
 
 object Codecs {
 
