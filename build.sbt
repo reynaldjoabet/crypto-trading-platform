@@ -7,23 +7,25 @@ ThisBuild / scalafmtOnCompile := false
 //ThisBuild / Test / fork := true
 //ThisBuild / Test / parallelExecution := false
 
-ThisBuild / scalacOptions ++= Seq(
+ThisBuild / scalacOptions := Seq(
   "-encoding",
   "UTF-8",
   "-no-indent",
   "-deprecation",
   "-feature",
   "-unchecked",
-  "-explain", // + actionable error messages
-  "-source:3.3", // + pin source level, no silent drift
-  "-Wunused:all",
+  "-source:3.3",
+  "-java-output-version:17",
+  "-Werror",
   "-Wvalue-discard",
   "-Wnonunit-statement",
-  "-language:strictEquality", // + catch nonsensical == (Money vs String, etc.)
-  "-Ykind-projector",
-  "-Xmax-inlines",
-  "64"
+  "-Xlint:all",
+  "-Ysafe-init",
+  "-Xcheck-macros",
+  "-Xmax-inlines:64"
 )
+
+Global / onChangedBuildSource := ReloadOnSourceChanges
 
 lazy val root = (project in file("."))
   .enablePlugins(JavaAppPackaging, DockerPlugin)
