@@ -4,7 +4,6 @@ import java.time.Instant
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
-
 import trading.domain.core.*
 import trading.domain.money.*
 
@@ -57,29 +56,37 @@ type BitcoinTxHash = BitcoinTxHash.T
 object BitcoinTxHash extends RefinedSubtype[String, BitcoinTxHashText]
 
 enum BlockchainProtocol derives CanEqual {
+
   case Evm
   case Solana
   case Bitcoin
+
 }
 
 enum NetworkKind {
+
   case Mainnet
   case Testnet
   case Devnet
   case Regtest
+
 }
 
 enum BlockchainStatus derives CanEqual {
+
   case Active
   case ReadOnly
   case DepositsPaused
   case WithdrawalsPaused
   case Disabled
+
 }
 
 enum ChainReference {
+
   case Evm(chainId: EvmChainId)
   case Named(value: BlockchainId)
+
 }
 
 final case class ChainCapabilities(
@@ -105,17 +112,17 @@ final case class Blockchain(
     version: AggregateVersion
 ) {
 
-  def acceptsDeposits: Boolean = {
+  def acceptsDeposits: Boolean =
     status == BlockchainStatus.Active
-  }
 
-  def acceptsWithdrawals: Boolean = {
+  def acceptsWithdrawals: Boolean =
     status == BlockchainStatus.Active
-  }
+
 }
 
 enum BlockchainAddress(val value: String) derives CanEqual {
-  case Evm(addr: EvmAddress) extends BlockchainAddress(addr)
+
+  case Evm(addr: EvmAddress)       extends BlockchainAddress(addr)
   case Solana(addr: SolanaAddress) extends BlockchainAddress(addr)
 
   def protocol: BlockchainProtocol = {
@@ -124,13 +131,16 @@ enum BlockchainAddress(val value: String) derives CanEqual {
       case BlockchainAddress.Solana(_) => BlockchainProtocol.Solana
     }
   }
+
 }
 
 enum AddressVerification {
+
   case StructurallyValid
   case ChecksumVerified
   case ChainVerified
   case OwnedByPlatform
+
 }
 
 final case class VerifiedBlockchainAddress(
@@ -139,7 +149,8 @@ final case class VerifiedBlockchainAddress(
 )
 
 enum TransactionId(val value: String) derives CanEqual {
-  case Evm(hash: EvmTxHash) extends TransactionId(hash)
+
+  case Evm(hash: EvmTxHash)         extends TransactionId(hash)
   case Solana(sig: SolanaSignature) extends TransactionId(sig)
   case Bitcoin(hash: BitcoinTxHash) extends TransactionId(hash)
 
@@ -150,6 +161,7 @@ enum TransactionId(val value: String) derives CanEqual {
       case TransactionId.Bitcoin(_) => BlockchainProtocol.Bitcoin
     }
   }
+
 }
 
 final case class BlockRef(
@@ -160,15 +172,18 @@ final case class BlockRef(
 )
 
 enum ChainTxKind {
+
   case CustomerWithdrawal
   case DepositSweep
   case InternalTreasuryMove
   case StablecoinMint
   case StablecoinBurn
   case ContractCall
+
 }
 
 enum ChainTxStatus derives CanEqual {
+
   case Draft
   case AwaitingSignature
   case Signed
@@ -180,6 +195,7 @@ enum ChainTxStatus derives CanEqual {
   case Failed
   case Dropped
   case Reorged
+
 }
 
 final case class ChainTx(
@@ -217,4 +233,5 @@ final case class ChainTx(
       case _                                              => false
     }
   }
+
 }

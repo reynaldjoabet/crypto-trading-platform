@@ -19,12 +19,15 @@ object addresses {
   }
 
   enum WalletAddress derives CanEqual {
+
     case Evm(addr: EvmAddress, chain: Chain)
     case Btc(addr: BtcAddress)
     case Sol(addr: SolAddress)
+
   }
 
   type Email = Email.T
-  object Email extends RefinedType[String, Match["^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"]]
+  object Email
+      extends RefinedType[String, Match["^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"]]
 
 }

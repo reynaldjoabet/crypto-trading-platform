@@ -1,12 +1,15 @@
 package trading.domain
 
 import java.util.UUID
+
 import io.github.iltotore.iron.*
 
-/** Refined identifiers using Iron's RefinedType pattern.
+/**
+  * Refined identifiers using Iron's RefinedType pattern.
   *
-  * Each UUID-based ID type extends RefinedType with a simple constraint (UUIDs themselves cannot be invalid once
-  * constructed). Inherits apply/value helpers for safe construction and extraction. This provides:
+  * Each UUID-based ID type extends RefinedType with a simple constraint (UUIDs themselves cannot be
+  * invalid once constructed). Inherits apply/value helpers for safe construction and extraction.
+  * This provides:
   *   - Compile-time type distinction (UserId != AccountId)
   *   - Consistent pattern with other refined types (money, addresses)
   *   - Automatic codec support via Iron integration

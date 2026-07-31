@@ -2,10 +2,11 @@ package trading.api.admin
 
 import cats.effect.*
 import cats.syntax.all.*
+
 import trading.auth.Auth
-import trading.domain.AppError
 import trading.domain.ids.*
 import trading.domain.user.{Principal, Role}
+import trading.domain.AppError
 import trading.instruments.InstrumentService
 import trading.strategies.StrategyService
 import org.http4s.*
@@ -39,60 +40,55 @@ object AdminRoutes {
         case e: AppError.InsufficientFunds => BadRequest(e.asJson)
         case e: AppError.Upstream          => BadGateway(e.asJson)
         case e: AppError                   => InternalServerError(e.asJson)
-        case other                         => {
+        case other                         =>
           Logger[F].error(other)("unhandled error") *>
-            InternalServerError(AppError.Internal(Option(other.getMessage).getOrElse("unknown")).asJson)
-        }
+            InternalServerError(
+              AppError.Internal(Option(other.getMessage).getOrElse("unknown")).asJson
+            )
       }
     }
 
     val authed: AuthedRoutes[Principal, F] = AuthedRoutes.of {
 
       // ── instruments ──
-      case GET -> Root / "instruments" as p => {
+      case GET -> Root / "instruments" as p =>
         Auth.requireRole(p, Role.Admin).attempt.flatMap {
           case Left(e: AppError) => Forbidden(e.asJson)
           case _                 => instruments.list(activeOnly = false).flatMap(xs => Ok(xs.asJson))
         }
-      }
 
-      case authReq @ POST -> Root / "instruments" as p => {
+      case authReq @ POST -> Root / "instruments" as p =>
         (for {
-          _ <- Auth.requireRole(p, Role.Admin)
+          _   <- Auth.requireRole(p, Role.Admin)
           req <- authReq.req.as[JsonCodecs.CreateInstrumentRequest]
           out <- instruments.create(req.symbol, req.base, req.quote, req.venue)
         } yield out).attempt.flatMap {
           case Right(i) => Created(i.asJson)
           case Left(e)  => problemResponse(e)
         }
-      }
 
-      case PATCH -> Root / "instruments" / UUIDVar(id) / "active" / boolStr as p => {
+      case PATCH -> Root / "instruments" / UUIDVar(id) / "active" / boolStr as p =>
         val active = boolStr.equalsIgnoreCase("true")
         (Auth.requireRole(p, Role.Admin) *>
           instruments.setActive(InstrumentId(id), active)).attempt.flatMap {
           case Right(_) => NoContent()
           case Left(e)  => problemResponse(e)
         }
-      }
 
       // ── strategies ──
-      case GET -> Root / "strategies" as p => {
+      case GET -> Root / "strategies" as p =>
         Auth.requireRole(p, Role.Admin) *>
           strategies.listPublished.flatMap(xs => Ok(xs.map(s => s.id.asJson).asJson))
-      }
 
-      case POST -> Root / "strategies" / UUIDVar(id) / "publish" as p => {
+      case POST -> Root / "strategies" / UUIDVar(id) / "publish" as p =>
         Auth.requireRole(p, Role.SuperAdmin).attempt.flatMap {
           case Left(e: AppError) => Forbidden(e.asJson)
-          case _                 => {
+          case _                 =>
             strategies.publish(StrategyId(id)).attempt.flatMap {
               case Right(s) => Ok(s.id.asJson)
               case Left(e)  => problemResponse(e)
             }
-          }
         }
-      }
     }
 
     authMw(authed)

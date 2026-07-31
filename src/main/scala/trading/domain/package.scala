@@ -1,11 +1,15 @@
 package trading
+
 import java.time.Instant
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
+
 package object domain {
 
-  /** Shared constraints */
+  /**
+    * Shared constraints
+    */
   type UuidText =
     DescribedAs[ValidUUID, "Expected UUID text"]
 
@@ -63,7 +67,9 @@ package object domain {
       "Expected idempotency key between 8 and 128 chars"
     ]
 
-  /** Strong IDs */
+  /**
+    * Strong IDs
+    */
   type WalletId = WalletId.T
   object WalletId extends RefinedType[String, UuidText]
 
@@ -76,7 +82,9 @@ package object domain {
   type TransferId = TransferId.T
   object TransferId extends RefinedType[String, UuidText]
 
-  /** Human/business values */
+  /**
+    * Human/business values
+    */
   type BlockchainId = BlockchainId.T
   object BlockchainId extends RefinedSubtype[String, SlugText]
 
@@ -95,7 +103,9 @@ package object domain {
   type IdempotencyKey = IdempotencyKey.T
   object IdempotencyKey extends RefinedType[String, IdempotencyKeyText]
 
-  /** Chain-specific primitive values */
+  /**
+    * Chain-specific primitive values
+    */
   type EvmChainId = EvmChainId.T
   object EvmChainId extends RefinedSubtype[Int, Positive]
 
@@ -113,7 +123,9 @@ package object domain {
     val zero: AtomicUnits = AtomicUnits.applyUnsafe(BigInt(0))
   }
 
-  /** Positive amount used when transferring/debiting. */
+  /**
+    * Positive amount used when transferring/debiting.
+    */
   type TransferUnits = TransferUnits.T
   object TransferUnits extends RefinedSubtype[BigInt, Positive]
 
@@ -130,14 +142,18 @@ package object domain {
   object SolanaSignature extends RefinedSubtype[String, SolanaSignatureText]
 
   enum WalletStatus {
+
     case Active
     case Frozen
     case Closed
+
   }
 
   enum AddressStatus {
+
     case Active
     case Disabled
+
   }
 
   final case class WalletAddress(
@@ -157,32 +173,41 @@ package object domain {
       status: WalletStatus,
       createdAt: Instant
   ) {
-    def addressOn(blockchainId: BlockchainId): Option[WalletAddress] = {
+
+    def addressOn(blockchainId: BlockchainId): Option[WalletAddress] =
       addresses.find(_.blockchainId == blockchainId)
-    }
+
   }
 
   enum BlockchainProtocol {
+
     case Evm
     case Solana
     case Bitcoin
+
   }
 
   enum NetworkKind {
+
     case Mainnet
     case Testnet
     case Devnet
+
   }
 
   enum NetworkStatus {
+
     case Active
     case Degraded
     case Disabled
+
   }
 
   enum ChainReference {
+
     case Evm(chainId: EvmChainId)
     case Named(value: BlockchainId)
+
   }
 
   final case class Blockchain(
@@ -197,6 +222,7 @@ package object domain {
   )
 
   enum BlockchainAddress {
+
     case Evm(value: EvmAddress)
     case Solana(value: SolanaAddress)
 
@@ -206,9 +232,11 @@ package object domain {
         case BlockchainAddress.Solana(_) => BlockchainProtocol.Solana
       }
     }
+
   }
 
   enum TransactionId {
+
     case Evm(value: EvmTxHash)
     case Solana(value: SolanaSignature)
 
@@ -218,6 +246,7 @@ package object domain {
         case TransactionId.Solana(_) => BlockchainProtocol.Solana
       }
     }
+
   }
 
   final case class BlockRef(
@@ -226,18 +255,23 @@ package object domain {
   )
 
   enum TokenStandard {
+
     case Native
     case Erc20
     case SplToken
+
   }
 
   enum AssetDeploymentStatus {
+
     case Active
     case Paused
     case Deprecated
+
   }
 
   enum AssetLocator derives CanEqual {
+
     case Native
     case EvmContract(value: EvmAddress)
     case SolanaMint(value: SolanaAddress)
@@ -249,6 +283,7 @@ package object domain {
         case AssetLocator.SolanaMint(_)  => Some(BlockchainProtocol.Solana)
       }
     }
+
   }
 
   final case class TokenDeployment(
@@ -262,23 +297,29 @@ package object domain {
   object DeploymentList extends RefinedSubtype[List[TokenDeployment], MinLength[1]]
 
   enum StablecoinMechanism {
+
     case FiatBacked
     case CryptoBacked
     case CommodityBacked
     case Algorithmic
     case Other
+
   }
 
   enum Peg {
+
     case Fiat(currency: FiatCurrency)
     case Crypto(assetId: AssetId)
     case Commodity(symbol: AssetSymbol)
+
   }
 
   enum AssetStatus {
+
     case Active
     case Paused
     case Deprecated
+
   }
 
   final case class Stablecoin(
@@ -291,11 +332,14 @@ package object domain {
       deployments: DeploymentList,
       status: AssetStatus
   ) {
-    def deploymentOn(blockchainId: BlockchainId): Option[TokenDeployment] = {
+
+    def deploymentOn(blockchainId: BlockchainId): Option[TokenDeployment] =
       deployments.find(_.blockchainId == blockchainId)
-    }
+
   }
+
   enum DomainError {
+
     case WalletNotFound(walletId: WalletId)
     case AssetNotFound(assetId: AssetId)
     case BlockchainNotFound(blockchainId: BlockchainId)
@@ -305,6 +349,7 @@ package object domain {
     case InvalidAssetLocatorForChain(blockchainId: BlockchainId, locator: AssetLocator)
     case InsufficientFunds(assetId: AssetId, available: AtomicUnits, requested: TransferUnits)
     case ChainClientFailed(message: String)
+
   }
 
   final case class TokenBalance(
@@ -312,9 +357,9 @@ package object domain {
       assetId: AssetId,
       units: AtomicUnits
   ) {
-    def credit(amount: TransferUnits): TokenBalance = {
+
+    def credit(amount: TransferUnits): TokenBalance =
       copy(units = AtomicUnits.applyUnsafe(units + amount))
-    }
 
     def debit(amount: TransferUnits): Either[DomainError, TokenBalance] = {
       if (units >= amount) {
@@ -323,13 +368,16 @@ package object domain {
         Left(DomainError.InsufficientFunds(assetId, units, amount))
       }
     }
+
   }
 
   enum TransferStatus {
+
     case Pending
     case Submitted
     case Confirmed
     case Failed
+
   }
 
   final case class TransferCommand(

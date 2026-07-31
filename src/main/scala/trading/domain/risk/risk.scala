@@ -2,29 +2,35 @@ package trading.domain.risk
 
 import java.time.Instant
 
-import trading.domain.core.*
 import trading.domain.chain.*
+import trading.domain.core.*
 //import trading.domain.wallet.*
 
 enum KycStatus {
+
   case NotRequired
   case Pending
   case Approved
   case Rejected
   case Expired
+
 }
 
 enum SanctionsStatus derives CanEqual {
+
   case NotScreened
   case Clear
   case PossibleMatch
   case ConfirmedMatch
+
 }
 
 enum RiskDecision derives CanEqual {
+
   case Approved
   case ReviewRequired
   case Rejected
+
 }
 
 final case class ComplianceSnapshot(
@@ -48,6 +54,7 @@ final case class ComplianceSnapshot(
         Left(DomainError.ComplianceRejected(reason.getOrElse("Rejected by compliance policy")))
     }
   }
+
 }
 
 final case class DestinationRisk(
@@ -70,4 +77,5 @@ final case class DestinationRisk(
         Right(())
     }
   }
+
 }

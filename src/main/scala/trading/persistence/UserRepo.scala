@@ -2,6 +2,7 @@ package trading.persistence
 
 import cats.effect.*
 import cats.syntax.all.*
+
 import trading.domain.ids.UserId
 import trading.domain.user.*
 import skunk.*
@@ -9,12 +10,15 @@ import skunk.codec.all.*
 import skunk.implicits.*
 
 trait UserRepo[F[_]] {
+
   def find(id: UserId): F[Option[User]]
   def findBySubject(sub: String): F[Option[User]]
   def upsert(u: User): F[Unit]
+
 }
 
 object UserRepo {
+
   import Codecs.*
 
   private val selectById: Query[UserId, User] = {
@@ -48,15 +52,13 @@ object UserRepo {
 
   def fromSession[F[_]: Concurrent](pool: Resource[F, Session[F]]): UserRepo[F] = {
     new UserRepo[F] {
-      def find(id: UserId): F[Option[User]] = {
+      def find(id: UserId): F[Option[User]] =
         pool.use(_.prepare(selectById).flatMap(_.option(id)))
-      }
-      def findBySubject(sub: String): F[Option[User]] = {
+      def findBySubject(sub: String): F[Option[User]] =
         pool.use(_.prepare(selectBySubject).flatMap(_.option(sub)))
-      }
-      def upsert(u: User): F[Unit] = {
+      def upsert(u: User): F[Unit] =
         pool.use(_.prepare(upsertUser).flatMap(_.execute(u))).void
-      }
     }
   }
+
 }

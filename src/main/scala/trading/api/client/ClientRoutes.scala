@@ -2,26 +2,28 @@ package trading.api.client
 
 import cats.effect.*
 import cats.syntax.all.*
+
 import io.circe.{Decoder, Json}
 import io.circe.syntax.*
 import trading.accounts.AccountService
 import trading.api.admin.JsonCodecs
 import trading.api.admin.JsonCodecs.given
-import trading.domain.AppError
+import trading.api.given
 import trading.domain.ids.*
-import trading.domain.money.{Amount, CurrencyCode, Price, Quantity}
 import trading.domain.market.*
+import trading.domain.money.{Amount, CurrencyCode, Price, Quantity}
 import trading.domain.user.Principal
+import trading.domain.AppError
 import trading.instruments.InstrumentService
 import trading.orders.{OrderService, PlaceOrderRequest}
 import trading.strategies.StrategyService
 import org.http4s.*
 import org.http4s.circe.*
+import org.http4s.circe.CirceEntityDecoder.circeEntityDecoder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.AuthMiddleware
 import org.typelevel.log4cats.Logger
-import org.http4s.circe.CirceEntityDecoder.circeEntityDecoder
-import trading.api.given
+
 object ClientRoutes {
 
   final case class PlaceOrderBody(
@@ -36,28 +38,29 @@ object ClientRoutes {
       strategyId: Option[StrategyId]
   )
 
-  given Decoder[PlaceOrderBody] = Decoder.instance(c => {
+  given Decoder[PlaceOrderBody] = Decoder.instance { c =>
     for {
-      a <- c.get[AccountId]("accountId")
-      i <- c.get[InstrumentId]("instrumentId")
-      s <- c.get[Side]("side")
-      ot <- c.get[OrderType]("orderType")
-      q <- c.get[Quantity]("quantity")
-      lp <- c.get[Option[Price]]("limitPrice")
-      sp <- c.get[Option[Price]]("stopPrice")
+      a   <- c.get[AccountId]("accountId")
+      i   <- c.get[InstrumentId]("instrumentId")
+      s   <- c.get[Side]("side")
+      ot  <- c.get[OrderType]("orderType")
+      q   <- c.get[Quantity]("quantity")
+      lp  <- c.get[Option[Price]]("limitPrice")
+      sp  <- c.get[Option[Price]]("stopPrice")
       tif <- c.get[TimeInForce]("timeInForce")
-      st <- c.get[Option[StrategyId]]("strategyId")
+      st  <- c.get[Option[StrategyId]]("strategyId")
     } yield PlaceOrderBody(a, i, s, ot, q, lp, sp, tif, st)
-  })
+  }
 
   final case class DepositBody(currency: CurrencyCode, amount: Amount, reference: String)
-  given Decoder[DepositBody] = Decoder.instance(c => {
+
+  given Decoder[DepositBody] = Decoder.instance { c =>
     for {
       ccy <- c.get[CurrencyCode]("currency")
       amt <- c.get[Amount]("amount")
       ref <- c.get[String]("reference")
     } yield DepositBody(ccy, amt, ref)
-  })
+  }
 
   def routes[F[_]: Async: Logger](
       authMw: AuthMiddleware[F, Principal],
@@ -80,92 +83,88 @@ object ClientRoutes {
         case e: AppError.InsufficientFunds => BadRequest(e.asJson)
         case e: AppError.Upstream          => BadGateway(e.asJson)
         case e: AppError                   => InternalServerError(e.asJson)
-        case other                         => {
+        case other                         =>
           Logger[F].error(other)("unhandled error") *>
-            InternalServerError(AppError.Internal(Option(other.getMessage).getOrElse("unknown")).asJson)
-        }
+            InternalServerError(
+              AppError.Internal(Option(other.getMessage).getOrElse("unknown")).asJson
+            )
       }
     }
 
     val authed: AuthedRoutes[Principal, F] = AuthedRoutes.of {
 
-      case GET -> Root / "instruments" as _ => {
+      case GET -> Root / "instruments" as _ =>
         instruments.list(activeOnly = true).flatMap(xs => Ok(xs.asJson))
-      }
 
-      case GET -> Root / "strategies" as _ => {
+      case GET -> Root / "strategies" as _ =>
         strategies.listPublished.flatMap(xs => Ok(xs.map(_.id.asJson).asJson))
-      }
 
-      case GET -> Root / "balance" / currency as p => {
+      case GET -> Root / "balance" / currency as p =>
         CurrencyCode.either(currency) match {
           case Left(reason) => BadRequest(AppError.Validation("currency", reason).asJson)
-          case Right(ccy)   => {
+          case Right(ccy)   =>
             accounts.balance(p.user.id, ccy).flatMap { b =>
               Ok(
                 Json.obj(
-                  "currency" -> ccy.asJson,
+                  "currency"  -> ccy.asJson,
                   "available" -> b.available.asJson,
-                  "pending" -> b.pending.asJson
+                  "pending"   -> b.pending.asJson
                 )
               )
             }
-          }
         }
-      }
 
-      case authReq @ POST -> Root / "orders" as p => {
+      case authReq @ POST -> Root / "orders" as p =>
         val _ = p
         (for {
           body <- authReq.req.as[PlaceOrderBody]
-          req = PlaceOrderRequest(
-            body.accountId,
-            body.instrumentId,
-            body.side,
-            body.orderType,
-            body.quantity,
-            body.limitPrice,
-            body.stopPrice,
-            body.timeInForce,
-            body.strategyId
-          )
+          req   = PlaceOrderRequest(
+                  body.accountId,
+                  body.instrumentId,
+                  body.side,
+                  body.orderType,
+                  body.quantity,
+                  body.limitPrice,
+                  body.stopPrice,
+                  body.timeInForce,
+                  body.strategyId
+                )
           out <- orders.place(req)
         } yield out).attempt.flatMap {
-          case Right(o) => {
+          case Right(o) =>
             Accepted(
               Json.obj(
-                "id" -> o.intent.id.asJson,
+                "id"     -> o.intent.id.asJson,
                 "status" -> o.status.asJson,
-                "venue" -> o.venue.asJson
+                "venue"  -> o.venue.asJson
               )
             )
-          }
           case Left(e) => problemResponse(e)
         }
-      }
 
-      case GET -> Root / "orders" / "by-account" / UUIDVar(acct) as _ => {
+      case GET -> Root / "orders" / "by-account" / UUIDVar(acct) as _ =>
         orders
           .list(AccountId(acct), 100)
-          .flatMap(xs => Ok(xs.map(o => Json.obj("id" -> o.intent.id.asJson, "status" -> o.status.asJson)).asJson))
-      }
+          .flatMap(xs =>
+            Ok(
+              xs.map(o => Json.obj("id" -> o.intent.id.asJson, "status" -> o.status.asJson)).asJson
+            )
+          )
 
-      case DELETE -> Root / "orders" / UUIDVar(id) as _ => {
+      case DELETE -> Root / "orders" / UUIDVar(id) as _ =>
         orders.cancel(OrderId(id)).attempt.flatMap {
           case Right(_) => NoContent()
           case Left(e)  => problemResponse(e)
         }
-      }
 
-      case authReq @ POST -> Root / "deposit" as p => {
+      case authReq @ POST -> Root / "deposit" as p =>
         (for {
           body <- authReq.req.as[DepositBody]
-          _ <- accounts.deposit(p.user.id, body.currency, body.amount, body.reference)
+          _    <- accounts.deposit(p.user.id, body.currency, body.amount, body.reference)
         } yield ()).attempt.flatMap {
           case Right(_) => Accepted(Json.obj("status" -> "ok".asJson))
           case Left(e)  => problemResponse(e)
         }
-      }
     }
 
     val _ = JsonCodecs // ensure object initialised

@@ -2,6 +2,7 @@ package trading.persistence
 
 import cats.effect.*
 import cats.syntax.all.*
+
 import trading.domain.accounts.*
 import trading.domain.ids.*
 import trading.domain.money.*
@@ -11,20 +12,24 @@ import skunk.implicits.*
 import io.github.iltotore.iron.*
 
 trait AccountRepo[F[_]] {
+
   def find(id: AccountId): F[Option[Account]]
   def findOrCreate(userId: Option[UserId], kind: AccountKind, ccy: CurrencyCode): F[Account]
   def post(entries: List[LedgerEntry]): F[Unit]
   def balance(id: AccountId, ccy: CurrencyCode): F[Balance]
+
 }
 
 object AccountRepo {
+
   import Codecs.*
-  private val selectById: Query[AccountId, Account] = {
+
+  private val selectById: Query[AccountId, Account] =
     sql"""SELECT id, user_id, kind, currency, created_at
           FROM accounts WHERE id = $accountIdC""".query(accountCodec)
-  }
 
-  private val selectByOwnerKindCurrency: Query[(Option[UserId], AccountKind, CurrencyCode), Account] = {
+  private val selectByOwnerKindCurrency
+      : Query[(Option[UserId], AccountKind, CurrencyCode), Account] = {
     sql"""SELECT id, user_id, kind, currency, created_at
           FROM accounts
           WHERE user_id IS NOT DISTINCT FROM ${userIdC.opt}
@@ -32,11 +37,11 @@ object AccountRepo {
             AND currency = $currencyC""".query(accountCodec)
   }
 
-  private val insertAccount
-      : Command[(AccountId, Option[UserId], AccountKind, trading.domain.money.CurrencyCode, java.time.Instant)] = {
+  private val insertAccount: Command[
+    (AccountId, Option[UserId], AccountKind, trading.domain.money.CurrencyCode, java.time.Instant)
+  ] =
     sql"""INSERT INTO accounts (id, user_id, kind, currency, created_at)
           VALUES ($accountIdC, ${userIdC.opt}, $accountKindC, $currencyC, $instantTz)""".command
-  }
 
   private val insertLedgerEntry: Command[LedgerEntry] = {
     sql"""INSERT INTO ledger_entries
@@ -57,24 +62,23 @@ object AccountRepo {
       cats.effect.std.UUIDGen[F]
   ): AccountRepo[F] = {
     new AccountRepo[F] {
-      def find(id: AccountId): F[Option[Account]] = {
+      def find(id: AccountId): F[Option[Account]] =
         pool.use(_.prepare(selectById).flatMap(_.option(id)))
-      }
 
       def findOrCreate(userId: Option[UserId], kind: AccountKind, ccy: CurrencyCode): F[Account] = {
         pool.use { s =>
           s.prepare(selectByOwnerKindCurrency).flatMap(_.option((userId, kind, ccy))).flatMap {
             case Some(a) => a.pure[F]
-            case None    => {
+            case None    =>
               for {
                 now <- Clock[F].realTimeInstant
-                id <- cats.effect.std.UUIDGen[F].randomUUID
-                acc = Account(AccountId(id), userId, kind, ccy, now)
-                _ <- s
-                  .prepare(insertAccount)
-                  .flatMap(_.execute((acc.id, acc.userId, acc.kind, acc.currency, acc.createdAt)))
+                id  <- cats.effect.std.UUIDGen[F].randomUUID
+                acc  = Account(AccountId(id), userId, kind, ccy, now)
+                _   <-
+                  s
+                    .prepare(insertAccount)
+                    .flatMap(_.execute((acc.id, acc.userId, acc.kind, acc.currency, acc.createdAt)))
               } yield acc
-            }
           }
         }
       }
@@ -96,4 +100,5 @@ object AccountRepo {
       }
     }
   }
+
 }

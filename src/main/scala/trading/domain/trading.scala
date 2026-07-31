@@ -1,11 +1,11 @@
 package trading.domain
 
+import java.time.Instant
+
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
 import trading.domain.ids.*
 import trading.domain.money.*
-
-import java.time.Instant
 
 object market {
 
@@ -26,10 +26,12 @@ object market {
   }
 
   enum Venue(val code: String) derives CanEqual {
-    case Kraken extends Venue("KRAKEN")
+
+    case Kraken  extends Venue("KRAKEN")
     case Binance extends Venue("BINANCE")
-    case FTX extends Venue("FTX")
-    case Mock extends Venue("MOCK")
+    case FTX     extends Venue("FTX")
+    case Mock    extends Venue("MOCK")
+
   }
 
   type Symbol = Symbol.T
@@ -68,10 +70,13 @@ object market {
       avgFillPrice: Option[Price],
       lastEventAt: Instant
   ) derives CanEqual {
+
     def isTerminal: Boolean = status match {
-      case OrderStatus.Filled | OrderStatus.Cancelled | OrderStatus.Rejected | OrderStatus.Failed => true
-      case _                                                                                      => false
+      case OrderStatus.Filled | OrderStatus.Cancelled | OrderStatus.Rejected | OrderStatus.Failed =>
+        true
+      case _ => false
     }
+
   }
 
   final case class Trade(

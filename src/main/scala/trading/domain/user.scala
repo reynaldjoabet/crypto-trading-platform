@@ -1,11 +1,11 @@
 package trading.domain
 
+import java.time.Instant
+
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
 import trading.domain.addresses.Email
 import trading.domain.ids.*
-
-import java.time.Instant
 
 object user {
 
@@ -18,11 +18,13 @@ object user {
   }
 
   enum Tier(val rank: Int) derives CanEqual {
-    case Bronze extends Tier(0)
-    case Silver extends Tier(1)
-    case Gold extends Tier(2)
+
+    case Bronze   extends Tier(0)
+    case Silver   extends Tier(1)
+    case Gold     extends Tier(2)
     case Platinum extends Tier(3)
-    case Diamond extends Tier(4)
+    case Diamond  extends Tier(4)
+
   }
 
   type DisplayName = DisplayName.T
@@ -48,8 +50,10 @@ object user {
       user: User,
       scopes: Set[String]
   ) derives CanEqual {
+
     def hasRole(r: Role): Boolean = user.role == r
-    def isAdmin: Boolean = user.role == Role.Admin || user.role == Role.SuperAdmin
+    def isAdmin: Boolean          = user.role == Role.Admin || user.role == Role.SuperAdmin
+
   }
 
 }

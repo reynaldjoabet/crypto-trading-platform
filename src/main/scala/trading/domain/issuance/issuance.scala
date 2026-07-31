@@ -5,22 +5,23 @@ import java.time.LocalDate
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
-
-import trading.domain.core.*
-import trading.domain.money.*
 import trading.domain.chain.*
+import trading.domain.core.*
 import trading.domain.ledger.*
+import trading.domain.money.*
 //import trading.domain.wallet.*
 
 type FiatMinorUnits = FiatMinorUnits.T
 object FiatMinorUnits extends RefinedSubtype[BigInt, Positive0]
 
 enum ReserveReportStatus {
+
   case Draft
   case Published
   case Verified
   case Superseded
   case Rejected
+
 }
 
 final case class ReserveReport(
@@ -38,12 +39,15 @@ final case class ReserveReport(
 )
 
 enum StablecoinOperationKind {
+
   case Mint
   case Burn
   case Redemption
+
 }
 
 enum StablecoinOperationStatus {
+
   case Requested
   case Approved
   case Reserved
@@ -54,6 +58,7 @@ enum StablecoinOperationStatus {
   case Rejected
   case Failed
   case Cancelled
+
 }
 
 final case class MintRequest(
@@ -172,4 +177,5 @@ object StablecoinLedgerTemplates {
       createdAt = now
     )
   }
+
 }

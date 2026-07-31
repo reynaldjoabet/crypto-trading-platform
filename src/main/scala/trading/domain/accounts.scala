@@ -1,8 +1,9 @@
 package trading.domain
 
+import java.time.Instant
+
 import trading.domain.ids.*
 import trading.domain.money.*
-import java.time.Instant
 
 object accounts {
 
@@ -10,7 +11,9 @@ object accounts {
     case Cash, Trading, Reserve, FeesPayable, ExchangeOmnibus, CustodyOmnibus
   }
 
-  /** A user-facing account is *one* per (user, currency). System accounts (omnibus, P&L) are not tied to a user.
+  /**
+    * A user-facing account is *one* per (user, currency). System accounts (omnibus, P&L) are not
+    * tied to a user.
     */
   final case class Account(
       id: AccountId,
@@ -24,7 +27,9 @@ object accounts {
     case Debit, Credit
   }
 
-  /** A double-entry ledger entry. Always written paired (debit + credit) inside one transaction so the books balance.
+  /**
+    * A double-entry ledger entry. Always written paired (debit + credit) inside one transaction so
+    * the books balance.
     */
   final case class LedgerEntry(
       id: LedgerEntryId,

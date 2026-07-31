@@ -1,8 +1,8 @@
 import Dependencies.*
 
-ThisBuild / scalaVersion := "3.3.8"
-ThisBuild / organization := "io.trading"
-ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / scalaVersion      := "3.3.8"
+ThisBuild / organization      := "io.trading"
+ThisBuild / version           := "0.1.0-SNAPSHOT"
 ThisBuild / scalafmtOnCompile := false
 //ThisBuild / Test / fork := true
 //ThisBuild / Test / parallelExecution := false
@@ -29,10 +29,10 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 lazy val root = (project in file("."))
   .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(
-    name := "crypto-trading-platform",
+    name                 := "crypto-trading-platform",
     libraryDependencies ++= all,
-    testFrameworks += new TestFramework("munit.Framework"),
-    Compile / mainClass := Some("trading.app.Main"),
-    dockerBaseImage := "eclipse-temurin:21-jre",
-    dockerExposedPorts ++= Seq(8080, 8081)
+    testFrameworks       += new TestFramework("munit.Framework"),
+    Compile / mainClass  := Some("trading.app.Main"),
+    dockerBaseImage      := "eclipse-temurin:21-jre",
+    dockerExposedPorts  ++= Seq(8080, 8081)
   )

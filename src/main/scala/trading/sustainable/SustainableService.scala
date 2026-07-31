@@ -1,14 +1,15 @@
 package trading.sustainable
 
+import java.time.Instant
+
 import cats.effect.*
-import trading.domain.AppError
+
 import trading.domain.ids.DonationId
 import trading.domain.ids.ProjectId
 import trading.domain.ids.UserId
 import trading.domain.money.Amount
 import trading.domain.money.CurrencyCode
-
-import java.time.Instant
+import trading.domain.AppError
 
 final case class SustainableProject(
     id: ProjectId,
@@ -31,19 +32,26 @@ final case class Donation(
 )
 
 trait SustainableService[F[_]] {
+
   def listProjects: F[List[SustainableProject]]
   def donate(userId: UserId, projectId: ProjectId, amount: Amount, ccy: CurrencyCode): F[Donation]
+
 }
 
 object SustainableService {
+
   def stub[F[_]: Sync]: SustainableService[F] = {
     new SustainableService[F] {
-      def listProjects: F[List[SustainableProject]] = {
+      def listProjects: F[List[SustainableProject]] =
         Sync[F].pure(List.empty)
-      }
-      def donate(userId: UserId, projectId: ProjectId, amount: Amount, ccy: CurrencyCode): F[Donation] = {
+      def donate(
+          userId: UserId,
+          projectId: ProjectId,
+          amount: Amount,
+          ccy: CurrencyCode
+      ): F[Donation] =
         Sync[F].raiseError(AppError.Internal("donation flow not implemented"))
-      }
     }
   }
+
 }

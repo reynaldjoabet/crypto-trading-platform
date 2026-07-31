@@ -1,13 +1,15 @@
 package trading.domain.transfer
 
 import java.time.Instant
+
+import trading.domain.chain.*
 import trading.domain.core.*
 import trading.domain.money.*
-import trading.domain.chain.*
 // import trading.domain.ledger.*
 // import trading.domain.wallet.*
 
 enum WithdrawalStatus {
+
   case Requested
   case Reserved
   case AwaitingApproval
@@ -19,9 +21,11 @@ enum WithdrawalStatus {
   case Completed
   case Failed
   case Cancelled
+
 }
 
 enum WithdrawalFailureReason {
+
   case RejectedByPolicy
   case RejectedByCompliance
   case InsufficientFunds
@@ -30,6 +34,7 @@ enum WithdrawalFailureReason {
   case ChainDropped
   case ChainReorg
   case Unknown
+
 }
 
 final case class WithdrawalDestination(
@@ -108,6 +113,7 @@ final case class Withdrawal(
       withdrawal.copy(failureReason = Some(reason))
     }
   }
+
 }
 
 object Withdrawal {
@@ -116,23 +122,22 @@ object Withdrawal {
     import WithdrawalStatus.*
 
     Map(
-      Requested -> Set(Reserved, AwaitingApproval, Failed, Cancelled),
+      Requested        -> Set(Reserved, AwaitingApproval, Failed, Cancelled),
       AwaitingApproval -> Set(Approved, Failed, Cancelled),
-      Approved -> Set(Reserved, Failed, Cancelled),
-      Reserved -> Set(Signing, Failed, Cancelled),
-      Signing -> Set(Signed, Failed),
-      Signed -> Set(Broadcast, Failed),
-      Broadcast -> Set(Confirming, Failed),
-      Confirming -> Set(Completed, Failed),
-      Completed -> Set.empty,
-      Failed -> Set.empty,
-      Cancelled -> Set.empty
+      Approved         -> Set(Reserved, Failed, Cancelled),
+      Reserved         -> Set(Signing, Failed, Cancelled),
+      Signing          -> Set(Signed, Failed),
+      Signed           -> Set(Broadcast, Failed),
+      Broadcast        -> Set(Confirming, Failed),
+      Confirming       -> Set(Completed, Failed),
+      Completed        -> Set.empty,
+      Failed           -> Set.empty,
+      Cancelled        -> Set.empty
     )
   }
 
-  def allowed(status: WithdrawalStatus): Set[WithdrawalStatus] = {
+  def allowed(status: WithdrawalStatus): Set[WithdrawalStatus] =
     allowedTransitions.getOrElse(status, Set.empty)
-  }
 
   def create(
       id: WithdrawalId,
@@ -180,6 +185,7 @@ object Withdrawal {
       )
     }
   }
+
 }
 
 final case class ChainEventKey(
@@ -190,11 +196,13 @@ final case class ChainEventKey(
 )
 
 enum ChainEventFinality {
+
   case Observed
   case Included
   case Confirmed
   case Finalized
   case Reorged
+
 }
 
 final case class ObservedTokenTransfer(
@@ -210,12 +218,14 @@ final case class ObservedTokenTransfer(
 )
 
 enum DepositStatus derives CanEqual {
+
   case Observed
   case AwaitingConfirmations
   case CreditedPending
   case CreditedAvailable
   case Ignored
   case Reorged
+
 }
 
 final case class Deposit(
@@ -241,7 +251,8 @@ final case class Deposit(
       now: Instant
   ): Either[DomainError, Deposit] = {
     status match {
-      case DepositStatus.Observed | DepositStatus.AwaitingConfirmations | DepositStatus.CreditedPending =>
+      case DepositStatus.Observed | DepositStatus.AwaitingConfirmations |
+          DepositStatus.CreditedPending =>
         Right(
           copy(
             ledgerTxId = Some(ledgerTxId),
@@ -265,7 +276,11 @@ final case class Deposit(
   def markReorged(now: Instant): Either[DomainError, Deposit] = {
     status match {
       case DepositStatus.CreditedAvailable =>
-        Left(DomainError.ValidationFailed("Cannot mark credited deposit as reorged without compensating ledger entry"))
+        Left(
+          DomainError.ValidationFailed(
+            "Cannot mark credited deposit as reorged without compensating ledger entry"
+          )
+        )
 
       case _ =>
         Right(
@@ -277,4 +292,5 @@ final case class Deposit(
         )
     }
   }
+
 }

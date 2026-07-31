@@ -180,22 +180,26 @@ object RedirectUri extends RefinedSubtype[String, AbsoluteUriNoFragmentText]
 
 type ScopeName = ScopeName.T
 object ScopeName extends RefinedSubtype[String, ScopeNameText] {
-  val openid: ScopeName = ScopeName.applyUnsafe("openid")
-  val profile: ScopeName = ScopeName.applyUnsafe("profile")
-  val email: ScopeName = ScopeName.applyUnsafe("email")
-  val phone: ScopeName = ScopeName.applyUnsafe("phone")
-  val address: ScopeName = ScopeName.applyUnsafe("address")
+
+  val openid: ScopeName        = ScopeName.applyUnsafe("openid")
+  val profile: ScopeName       = ScopeName.applyUnsafe("profile")
+  val email: ScopeName         = ScopeName.applyUnsafe("email")
+  val phone: ScopeName         = ScopeName.applyUnsafe("phone")
+  val address: ScopeName       = ScopeName.applyUnsafe("address")
   val offlineAccess: ScopeName = ScopeName.applyUnsafe("offline_access")
+
 }
 
 type ClaimName = ClaimName.T
 object ClaimName extends RefinedSubtype[String, ClaimNameText] {
-  val sub: ClaimName = ClaimName.applyUnsafe("sub")
-  val name: ClaimName = ClaimName.applyUnsafe("name")
-  val email: ClaimName = ClaimName.applyUnsafe("email")
+
+  val sub: ClaimName           = ClaimName.applyUnsafe("sub")
+  val name: ClaimName          = ClaimName.applyUnsafe("name")
+  val email: ClaimName         = ClaimName.applyUnsafe("email")
   val emailVerified: ClaimName = ClaimName.applyUnsafe("email_verified")
-  val phoneNumber: ClaimName = ClaimName.applyUnsafe("phone_number")
-  val address: ClaimName = ClaimName.applyUnsafe("address")
+  val phoneNumber: ClaimName   = ClaimName.applyUnsafe("phone_number")
+  val address: ClaimName       = ClaimName.applyUnsafe("address")
+
 }
 
 type Subject = Subject.T
@@ -249,61 +253,64 @@ final case class ScopeSet private (
     values: Set[ScopeName]
 ) {
 
-  def contains(scope: ScopeName): Boolean = {
+  def contains(scope: ScopeName): Boolean =
     values.contains(scope)
-  }
 
-  def requiresOpenId: Boolean = {
+  def requiresOpenId: Boolean =
     values.contains(ScopeName.openid)
-  }
 
-  def +(scope: ScopeName): ScopeSet = {
+  def +(scope: ScopeName): ScopeSet =
     ScopeSet(values + scope)
-  }
 
-  def intersect(allowed: ScopeSet): ScopeSet = {
+  def intersect(allowed: ScopeSet): ScopeSet =
     ScopeSet(values.intersect(allowed.values))
-  }
 
-  def asWire: String = {
+  def asWire: String =
     values.map(_.toString).toList.sorted.mkString(" ")
-  }
+
 }
 
 object ScopeSet {
 
   val empty: ScopeSet = ScopeSet(Set.empty)
 
-  def make(values: Set[ScopeName]): Either[OidcDomainError, ScopeSet] = {
+  def make(values: Set[ScopeName]): Either[OidcDomainError, ScopeSet] =
     Right(ScopeSet(values))
-  }
 
   def requireOpenId(values: Set[ScopeName]): Either[OidcDomainError, ScopeSet] = {
     if (values.contains(ScopeName.openid)) {
       Right(ScopeSet(values))
     } else {
-      Left(OidcDomainError.ProtocolFailure(OAuthErrorCode.InvalidScope, Some("OIDC requests require openid scope")))
+      Left(
+        OidcDomainError.ProtocolFailure(
+          OAuthErrorCode.InvalidScope,
+          Some("OIDC requests require openid scope")
+        )
+      )
     }
   }
+
 }
 
 enum OAuthErrorCode(val wire: String) {
-  case InvalidRequest extends OAuthErrorCode("invalid_request")
-  case UnauthorizedClient extends OAuthErrorCode("unauthorized_client")
-  case AccessDenied extends OAuthErrorCode("access_denied")
-  case UnsupportedResponseType extends OAuthErrorCode("unsupported_response_type")
-  case InvalidScope extends OAuthErrorCode("invalid_scope")
-  case ServerError extends OAuthErrorCode("server_error")
-  case TemporarilyUnavailable extends OAuthErrorCode("temporarily_unavailable")
-  case InvalidClient extends OAuthErrorCode("invalid_client")
-  case InvalidGrant extends OAuthErrorCode("invalid_grant")
-  case InvalidToken extends OAuthErrorCode("invalid_token")
-  case UnsupportedGrantType extends OAuthErrorCode("unsupported_grant_type")
 
-  case LoginRequired extends OAuthErrorCode("login_required")
-  case InteractionRequired extends OAuthErrorCode("interaction_required")
-  case ConsentRequired extends OAuthErrorCode("consent_required")
+  case InvalidRequest          extends OAuthErrorCode("invalid_request")
+  case UnauthorizedClient      extends OAuthErrorCode("unauthorized_client")
+  case AccessDenied            extends OAuthErrorCode("access_denied")
+  case UnsupportedResponseType extends OAuthErrorCode("unsupported_response_type")
+  case InvalidScope            extends OAuthErrorCode("invalid_scope")
+  case ServerError             extends OAuthErrorCode("server_error")
+  case TemporarilyUnavailable  extends OAuthErrorCode("temporarily_unavailable")
+  case InvalidClient           extends OAuthErrorCode("invalid_client")
+  case InvalidGrant            extends OAuthErrorCode("invalid_grant")
+  case InvalidToken            extends OAuthErrorCode("invalid_token")
+  case UnsupportedGrantType    extends OAuthErrorCode("unsupported_grant_type")
+
+  case LoginRequired            extends OAuthErrorCode("login_required")
+  case InteractionRequired      extends OAuthErrorCode("interaction_required")
+  case ConsentRequired          extends OAuthErrorCode("consent_required")
   case AccountSelectionRequired extends OAuthErrorCode("account_selection_required")
+
 }
 
 final case class ProtocolError(
@@ -313,6 +320,7 @@ final case class ProtocolError(
 )
 
 enum OidcDomainError {
+
   case ValidationFailed(message: String)
   case ProtocolFailure(code: OAuthErrorCode, description: Option[String])
 
@@ -353,6 +361,7 @@ enum OidcDomainError {
   case RepositoryFailed(message: String)
 
   case ConcurrencyConflict(entity: String, expected: AggregateVersion, actual: AggregateVersion)
+
 }
 
 type IdempotencyKeyText =
@@ -362,7 +371,10 @@ type IdempotencyKeyText =
   ]
 
 type ExternalReferenceText =
-  DescribedAs[Trimmed & MinLength[1] & MaxLength[128], "Expected external reference up to 128 characters"]
+  DescribedAs[
+    Trimmed & MinLength[1] & MaxLength[128],
+    "Expected external reference up to 128 characters"
+  ]
 
 type OwnerId = OwnerId.T
 object OwnerId extends RefinedType[String, UuidText]
@@ -452,6 +464,7 @@ type PositiveUnits = PositiveUnits.T
 object PositiveUnits extends RefinedSubtype[BigInt, Positive]
 
 enum DomainError {
+
   case ValidationFailed(message: String)
   case AssetMismatch(expected: AssetId, actual: AssetId)
   case AmountMustBePositive(assetId: AssetId)
@@ -483,6 +496,7 @@ enum DomainError {
   case LimitExceeded(reason: String)
   case ChainClientFailed(message: String)
   case ConcurrencyConflict(entity: String, expected: AggregateVersion, actual: AggregateVersion)
+
 }
 
 final case class AuditInfo(

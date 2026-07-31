@@ -1,12 +1,12 @@
 package trading.domain
 
+import java.time.Instant
+
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
 import trading.domain.ids.*
-import trading.domain.money.*
 import trading.domain.market.Symbol
-
-import java.time.Instant
+import trading.domain.money.*
 
 object strategy {
 

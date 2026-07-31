@@ -1,15 +1,16 @@
 package trading.wallets
 
+import java.time.Instant
+
 import cats.effect.*
 import cats.effect.std.UUIDGen
 import cats.syntax.all.*
-import trading.domain.AppError
+
 import trading.domain.addresses.Chain
 import trading.domain.addresses.WalletAddress
 import trading.domain.ids.UserId
 import trading.domain.ids.WalletId
-
-import java.time.Instant
+import trading.domain.AppError
 
 final case class WalletRecord(
     id: WalletId,
@@ -22,13 +23,17 @@ final case class WalletRecord(
 )
 
 trait WalletService[F[_]] {
+
   def link(userId: UserId, label: String, addr: WalletAddress): F[WalletRecord]
   def list(userId: UserId): F[List[WalletRecord]]
   def verifyOwnership(userId: UserId, walletId: WalletId, signature: String, nonce: String): F[Unit]
+
 }
 
-/** Wallet ownership verification is "sign-this-nonce" style — we issue a per-user nonce, the client signs it with their
-  * wallet (Metamask/WalletConnect), and we recover the address. This skeleton stubs the verification path.
+/**
+  * Wallet ownership verification is "sign-this-nonce" style — we issue a per-user nonce, the client
+  * signs it with their wallet (Metamask/WalletConnect), and we recover the address. This skeleton
+  * stubs the verification path.
   */
 object WalletService {
 
@@ -37,19 +42,22 @@ object WalletService {
 
       def link(userId: UserId, label: String, addr: WalletAddress): F[WalletRecord] = {
         for {
-          id <- UUIDGen[F].randomUUID
-          now <- Clock[F].realTimeInstant
+          id              <- UUIDGen[F].randomUUID
+          now             <- Clock[F].realTimeInstant
           (chain, addrStr) = serialise(addr)
         } yield WalletRecord(WalletId(id), userId, label, chain, addrStr, isVerified = false, now)
       }
 
-      def list(userId: UserId): F[List[WalletRecord]] = {
+      def list(userId: UserId): F[List[WalletRecord]] =
         Sync[F].pure(List.empty)
-      }
 
-      def verifyOwnership(userId: UserId, walletId: WalletId, signature: String, nonce: String): F[Unit] = {
+      def verifyOwnership(
+          userId: UserId,
+          walletId: WalletId,
+          signature: String,
+          nonce: String
+      ): F[Unit] =
         Sync[F].raiseError(AppError.Internal("wallet ownership verification not implemented"))
-      }
     }
   }
 

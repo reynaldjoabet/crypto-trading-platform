@@ -4,10 +4,9 @@ import java.time.Instant
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
-
+import trading.domain.chain.*
 import trading.domain.core.*
 import trading.domain.money.*
-import trading.domain.chain.*
 
 type DerivationPathText =
   DescribedAs[
@@ -19,16 +18,20 @@ type DerivationPath = DerivationPath.T
 object DerivationPath extends RefinedSubtype[String, DerivationPathText]
 
 enum OwnerKind {
+
   case Individual
   case Business
   case InternalSystem
+
 }
 
 enum OwnerStatus {
+
   case Active
   case Restricted
   case Suspended
   case Closed
+
 }
 
 final case class Owner(
@@ -41,12 +44,15 @@ final case class Owner(
 )
 
 enum CustodyModel {
+
   case Custodial
   case NonCustodial
   case ExternalObserved
+
 }
 
 enum WalletKind {
+
   case Customer
   case TreasuryHot
   case TreasuryWarm
@@ -54,29 +60,36 @@ enum WalletKind {
   case FeeCollector
   case StablecoinIssuer
   case StablecoinRedemption
+
 }
 
 enum WalletStatus derives CanEqual {
+
   case Active
   case Frozen
   case WithdrawalsFrozen
   case DepositsFrozen
   case Closing
   case Closed
+
 }
 
 enum AddressPurpose derives CanEqual {
+
   case Deposit
   case WithdrawalSource
   case Change
   case Treasury
   case Contract
+
 }
 
 enum WalletAddressStatus derives CanEqual {
+
   case Active
   case Disabled
   case Retired
+
 }
 
 final case class WalletAddress(
@@ -92,10 +105,12 @@ final case class WalletAddress(
 ) derives CanEqual
 
 enum DestinationPolicy {
+
   case AnyAddress
   case AllowlistedOnly
   case InternalOnly
   case Disabled
+
 }
 
 final case class WithdrawalLimit(
@@ -122,13 +137,12 @@ final case class WalletPolicy(
     approvalPolicy: ApprovalPolicy
 ) {
 
-  def allowsAsset(assetId: AssetId): Boolean = {
+  def allowsAsset(assetId: AssetId): Boolean =
     allowedAssets.isEmpty || allowedAssets.contains(assetId)
-  }
 
-  def allowsChain(blockchainId: BlockchainId): Boolean = {
+  def allowsChain(blockchainId: BlockchainId): Boolean =
     allowedChains.isEmpty || allowedChains.contains(blockchainId)
-  }
+
 }
 
 final case class Wallet(
@@ -204,4 +218,5 @@ final case class Wallet(
       Right(())
     }
   }
+
 }

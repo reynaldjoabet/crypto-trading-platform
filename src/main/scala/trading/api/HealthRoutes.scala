@@ -2,16 +2,18 @@ package trading.api
 
 import cats.effect.*
 import cats.syntax.all.*
+
 import io.circe.Json
 import org.http4s.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.Http4sDsl
 
-/** Unauthenticated operational probes, mounted at the root of every server.
+/**
+  * Unauthenticated operational probes, mounted at the root of every server.
   *
   *   - `GET /health` — liveness: the process is up and serving. Cheap, no dependencies.
-  *   - `GET /ready` — readiness: dependencies (Postgres) are reachable. Returns 503 when not, so load balancers / k8s
-  *     pull the instance out of rotation instead of routing failing traffic.
+  *   - `GET /ready` — readiness: dependencies (Postgres) are reachable. Returns 503 when not, so
+  *     load balancers / k8s pull the instance out of rotation instead of routing failing traffic.
   */
 object HealthRoutes {
 
@@ -30,7 +32,9 @@ object HealthRoutes {
             ServiceUnavailable(
               Json.obj(
                 "status" -> Json.fromString("unready"),
-                "error" -> Json.fromString(Option(e.getMessage).getOrElse("dependency check failed"))
+                "error"  -> Json.fromString(
+                  Option(e.getMessage).getOrElse("dependency check failed")
+                )
               )
             )
         }

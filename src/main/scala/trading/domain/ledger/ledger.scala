@@ -4,20 +4,22 @@ import java.time.Instant
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
-
 import trading.domain.core.*
 import trading.domain.money.*
 //import trading.domain.wallet.*
 
 enum LedgerAccountKind {
+
   case Asset
   case Liability
   case Revenue
   case Expense
   case Equity
+
 }
 
 enum LedgerAccountPurpose {
+
   case CustomerAvailable
   case CustomerReserved
   case CustomerPendingInbound
@@ -30,12 +32,15 @@ enum LedgerAccountPurpose {
   case BurnClearing
   case RedemptionClearing
   case ReconciliationSuspense
+
 }
 
 enum LedgerAccountStatus {
+
   case Active
   case Frozen
   case Closed
+
 }
 
 final case class LedgerAccount(
@@ -51,8 +56,10 @@ final case class LedgerAccount(
 )
 
 enum PostingSide derives CanEqual {
+
   case Debit
   case Credit
+
 }
 
 final case class Posting(
@@ -66,6 +73,7 @@ type PostingList = PostingList.T
 object PostingList extends RefinedSubtype[List[Posting], MinLength[2]]
 
 enum LedgerTxType {
+
   case DepositObserved
   case DepositAvailable
   case WithdrawalReserved
@@ -78,6 +86,7 @@ enum LedgerTxType {
   case StablecoinBurned
   case StablecoinRedeemed
   case ReconciliationAdjustment
+
 }
 
 final case class LedgerTransaction private (
@@ -105,11 +114,11 @@ object LedgerTransaction {
   ): Either[DomainError, LedgerTransaction] = {
     for {
       refinedPostings <- PostingList.either(postings).left.map(DomainError.ValidationFailed.apply)
-      _ <- Either.cond(
-        isBalanced(refinedPostings),
-        (),
-        DomainError.UnbalancedLedgerTransaction(explainImbalance(refinedPostings))
-      )
+      _               <- Either.cond(
+             isBalanced(refinedPostings),
+             (),
+             DomainError.UnbalancedLedgerTransaction(explainImbalance(refinedPostings))
+           )
     } yield {
       LedgerTransaction(
         id = id,
@@ -164,13 +173,16 @@ object LedgerTransaction {
       }
       .mkString("; ")
   }
+
 }
 
 enum ReservationStatus derives CanEqual {
+
   case Active
   case Consumed
   case Released
   case Expired
+
 }
 
 final case class FundsReservation(
@@ -188,10 +200,9 @@ final case class FundsReservation(
     version: AggregateVersion
 ) {
 
-  def activeAt(now: Instant): Boolean = {
+  def activeAt(now: Instant): Boolean =
     status == ReservationStatus.Active &&
-    expiresAt.forall(_.isAfter(now))
-  }
+      expiresAt.forall(_.isAfter(now))
 
   def consume(now: Instant): Either[DomainError, FundsReservation] = {
     if (activeAt(now)) {
@@ -220,4 +231,5 @@ final case class FundsReservation(
       Left(DomainError.ReservationNotAvailable(id))
     }
   }
+
 }

@@ -4,23 +4,26 @@ import java.time.Instant
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.all.*
-
+import trading.domain.chain.*
 import trading.domain.core.*
 import trading.domain.money.*
-import trading.domain.chain.*
 
 enum AssetKind {
+
   case Native
   case Stablecoin
   case Wrapped
   case UtilityToken
+
 }
 
 enum AssetStatus derives CanEqual {
+
   case Active
   case Paused
   case Deprecated
   case Delisted
+
 }
 
 final case class Asset(
@@ -40,24 +43,30 @@ final case class Asset(
       Left(DomainError.AssetInactive(id))
     }
   }
+
 }
 
 enum TokenStandard {
+
   case Native
   case Erc20
   case SplToken
   case Other
+
 }
 
 enum AssetDeploymentStatus derives CanEqual {
+
   case Active
   case DepositsPaused
   case WithdrawalsPaused
   case Paused
   case Deprecated
+
 }
 
 enum AssetLocator derives CanEqual {
+
   case Native
   case EvmContract(address: EvmAddress)
   case SolanaMint(address: SolanaAddress)
@@ -69,6 +78,7 @@ enum AssetLocator derives CanEqual {
       case AssetLocator.SolanaMint(_)  => Some(BlockchainProtocol.Solana)
     }
   }
+
 }
 
 final case class AssetDeployment(
@@ -86,13 +96,11 @@ final case class AssetDeployment(
     version: AggregateVersion
 ) {
 
-  def depositsEnabled: Boolean = {
+  def depositsEnabled: Boolean =
     status == AssetDeploymentStatus.Active || status == AssetDeploymentStatus.WithdrawalsPaused
-  }
 
-  def withdrawalsEnabled: Boolean = {
+  def withdrawalsEnabled: Boolean =
     status == AssetDeploymentStatus.Active || status == AssetDeploymentStatus.DepositsPaused
-  }
 
   def validateForChain(chain: Blockchain): Either[DomainError, Unit] = {
     locator.protocol match {
@@ -111,21 +119,26 @@ final case class AssetDeployment(
         )
     }
   }
+
 }
 
 enum StablecoinMechanism {
+
   case FiatBacked
   case CryptoBacked
   case CommodityBacked
   case Algorithmic
   case Hybrid
+
 }
 
 enum Peg {
+
   case Fiat(currency: FiatCurrency)
   case Crypto(assetId: AssetId)
   case Commodity(symbol: AssetSymbol)
   case Basket(items: PegBasket)
+
 }
 
 final case class PegBasketItem(
@@ -145,24 +158,25 @@ object PegBasket {
   def make(items: List[PegBasketItem]): Either[DomainError, PegBasket] = {
     for {
       refinedItems <- PegBasketItems.either(items).left.map(DomainError.ValidationFailed.apply)
-      totalWeight = refinedItems.foldLeft(0)(_ + _.weight)
-      _ <- Either.cond(
-        totalWeight == 10000,
-        (),
-        DomainError.ValidationFailed(s"Basket weights must sum to 10000 bps, got $totalWeight")
-      )
-    } yield {
-      PegBasket(refinedItems)
-    }
+      totalWeight   = refinedItems.foldLeft(0)(_ + _.weight)
+      _            <- Either.cond(
+             totalWeight == 10000,
+             (),
+             DomainError.ValidationFailed(s"Basket weights must sum to 10000 bps, got $totalWeight")
+           )
+    } yield PegBasket(refinedItems)
   }
+
 }
 
 enum ReserveProofStatus {
+
   case NotRequired
   case Pending
   case Verified
   case Stale
   case Failed
+
 }
 
 final case class StablecoinProfile(
@@ -181,9 +195,8 @@ final case class Stablecoin(
     deployments: List[AssetDeployment]
 ) {
 
-  def deploymentOn(blockchainId: BlockchainId): Option[AssetDeployment] = {
+  def deploymentOn(blockchainId: BlockchainId): Option[AssetDeployment] =
     deployments.find(_.blockchainId == blockchainId)
-  }
 
   def activeDeploymentOn(blockchainId: BlockchainId): Either[DomainError, AssetDeployment] = {
     deploymentOn(blockchainId) match {
@@ -197,4 +210,5 @@ final case class Stablecoin(
         Left(DomainError.AssetNotDeployed(asset.id, blockchainId))
     }
   }
+
 }
