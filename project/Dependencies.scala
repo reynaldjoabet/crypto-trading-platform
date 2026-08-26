@@ -5,24 +5,24 @@ object Dependencies {
   private object V {
 
     val iron             = "3.3.2"
-    val skunk            = "1.1.0-RC1"
+    val skunk            = "1.1.0-RC1" // held: iron-skunk 3.3.2 still builds against skunk 1.0.0-M12
     val http4s           = "0.23.36"
     val circe            = "0.14.16"
-    val ce               = "3.7.0"
+    val ce               = "3.7.1"
     val log4cats         = "2.8.0"
-    val logback          = "1.6.1"
-    val munit            = "1.3.4"
+    val logback          = "1.6.3"
+    val munit            = "1.3.5"
     val munitCE          = "2.2.0"
-    val jsoniter         = "2.39.1"
+    val jsoniter         = "2.40.1"
     val fs2              = "3.13.0"
     val fs2Kafka         = "4.0.0"
     val chimney          = "1.11.0"
-    val hedgehog         = "0.13.1"
+    val hedgehog         = "0.14.0"
     val scalacheck       = "1.19.0"
     val hikaricp         = "7.1.0"
-    val flyway           = "13.1.0" // held on 12.x; 13.0.0 is a major bump
+    val flyway           = "13.4.0"
     val postgres         = "42.7.13"
-    val bouncycastle     = "1.85"
+    val bouncycastle     = "1.85"      // bcpkix has no 1.85.2; keep both BC artifacts in lockstep
     val password4j       = "1.8.4"
     val auth0            = "4.6.0"
     val nimbusJoseJwt    = "10.9.1"
@@ -31,12 +31,12 @@ object Dependencies {
     val jwtScala         = "11.0.4"
     // --- Cache ---
     val caffeine = "3.2.4"
-    val redisson = "4.6.1"
+    val redisson = "4.7.0"
 
     // --- Observability ---
-    val datadog = "2.56.0"
+    val datadog = "2.59.0"
     val kamon   = "2.8.1"
-    val otel4s  = "0.16.0" // pinned: skunk-core 1.1.0-RC1 requires 0.16.0 (1.0.0 is binary-incompatible)
+    val otel4s  = "0.16.0" // pinned by skunk 1.1.0-RC1; unblocks (to 1.x) only when skunk moves
 
     // --- Config ---
     val pureconfig = "0.17.10"
