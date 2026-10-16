@@ -14,41 +14,41 @@ object Dependencies {
 
     // --- FP ---
     val catsEffect      = "3.7.1"
-    val fs2             = "3.13.0"
-    val fs2Kafka        = "4.0.0"
-    val chimney         = "1.11.0"
+    val fs2             = "3.14.0"
+    val fs2Kafka        = "4.1.3"
+    val chimney         = "2.1.0"
     val uuidGenerator   = "5.2.0"
     val iron            = "3.3.2"
     val hedgehog        = "0.14.0"
-    val scalacheck      = "1.19.0"
-    val munit           = "1.3.5"
-    val munitCatsEffect = "2.2.0"
+    val scalacheck      = "1.20.0"
+    val munit           = "1.3.6"
+    val munitCatsEffect = "2.2.1"
 
     // --- DB ---
-    val skunk    = "1.1.0-RC1" // held: iron-skunk 3.3.2 still builds against skunk 1.0.0-M12
+    val skunk    = "2.0.0-RC3" // held: iron-skunk 3.3.2 still builds against skunk 1.0.0-M12
     val hikaricp = "7.1.0"
-    val flyway   = "13.4.0"
-    val postgres = "42.7.13"
+    val flyway   = "13.10.0"
+    val postgres = "42.7.14"
 
     // --- Security ---
     val jwtScala         = "11.0.4"
     val bouncycastle     = "1.85" // bcpkix has no 1.85.2; keep both BC artifacts in lockstep
     val password4j       = "1.8.4"
-    val auth0            = "4.6.0"
-    val nimbusJoseJwt    = "10.9.1"
+    val auth0            = "4.6.2"
+    val nimbusJoseJwt    = "10.10"
     val nimbusOauth2Oidc = "11.38.2"
     val vault            = "5.1.0"
 
     // --- Logging ---
     val log4cats = "2.8.0"
-    val logback  = "1.6.3"
+    val logback  = "1.6.5"
 
     // --- Cache ---
-    val caffeine = "3.2.4"
-    val redisson = "4.7.0"
+    val caffeine = "3.3.1"
+    val redisson = "4.8.0"
 
     // --- Observability ---
-    val datadog = "2.59.0"
+    val datadog = "2.62.0"
     val kamon   = "2.8.1"
     val otel4s  = "0.16.0" // pinned by skunk 1.1.0-RC1; unblocks (to 1.x) only when skunk moves
 
