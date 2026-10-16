@@ -13,8 +13,8 @@ updates:
       - dependencies
     commit-message:
       prefix: build(deps)
-    # Scala versions are bumped by hand.
     ignore:
+      # Scala versions are bumped by hand.
       - dependency-name: "org.scala-lang:scala3*"
     groups:
       sbt-all:

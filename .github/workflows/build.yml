@@ -49,7 +49,7 @@ jobs:
         run: sbt --client "scalafmtSbtCheck; scalafmtCheckAll"
 
   build:
-    name: Scala ${{ matrix.scala }} / Java ${{ matrix.java }} (${{ matrix.distribution }})
+    name: Java ${{ matrix.java }} (${{ matrix.distribution }})
 
     needs: lint
     runs-on: ubuntu-latest
@@ -58,10 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-
-        scala: ['3.3.8','3.9.0']
         java: ['17','21', '25']
-
         distribution: [temurin, corretto]
 
     steps:
@@ -85,4 +82,4 @@ jobs:
         uses: sbt/setup-sbt@v1
 
       - name: Compile and test
-        run: sbt --client "++${{ matrix.scala }}" "Test/compile; test"
+        run: sbt --client "Test/compile; test"

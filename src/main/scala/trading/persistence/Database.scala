@@ -9,8 +9,8 @@ import fs2.io.net.Network
 
 import org.flywaydb.core.Flyway
 import org.typelevel.log4cats.Logger
-import org.typelevel.otel4s.metrics.Meter.Implicits.noop
-import org.typelevel.otel4s.trace.Tracer.Implicits.noop
+import org.typelevel.otel4s.metrics.MeterProvider
+import org.typelevel.otel4s.trace.TracerProvider
 import skunk.codec.all.int4
 import skunk.implicits.*
 import skunk.Session
@@ -52,6 +52,9 @@ object Database {
   def pool[F[_]: Async: Logger: Console: Network](
       cfg: DbConfig
   ): Resource[F, Resource[F, Session[F]]] = {
+    // No telemetry exporter is wired up yet; skunk 2 asks for providers rather than a Tracer/Meter.
+    given TracerProvider[F] = TracerProvider.noop[F]
+    given MeterProvider[F]  = MeterProvider.noop[F]
     Session
       .Builder[F]
       .withHost(cfg.host)
