@@ -38,7 +38,7 @@ object Main extends IOApp.Simple {
 
   def program[F[_]: Async: Console: SecureRandom: Network]: F[Unit] = {
     given SelfAwareStructuredLogger[F] = Slf4jLogger.getLogger[F]
-    given UUIDGen[F]                   = UUIDGen.fromSecureRandom[F]
+    given UUIDGen[F]                   = TimeOrderedUUIDGen[F]
     Resources.allocate[F].use(_ => Async[F].never)
   }
 

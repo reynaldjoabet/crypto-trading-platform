@@ -17,6 +17,7 @@ object Dependencies {
     val fs2             = "3.13.0"
     val fs2Kafka        = "4.0.0"
     val chimney         = "1.11.0"
+    val uuidGenerator   = "5.2.0"
     val iron            = "3.3.2"
     val hedgehog        = "0.14.0"
     val scalacheck      = "1.19.0"
@@ -126,7 +127,8 @@ object Dependencies {
 
   object domain {
 
-    val chimney = "io.scalaland" %% "chimney" % Versions.chimney
+    val chimney       = "io.scalaland"      %% "chimney"             % Versions.chimney
+    val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % Versions.uuidGenerator
 
     object iron {
 
@@ -259,6 +261,7 @@ object Dependencies {
       core.fs2,
       kafka.fs2,
       domain.chimney,
+      domain.uuidGenerator,
       database.postgres,
       database.hikaricp,
       database.flyway,
