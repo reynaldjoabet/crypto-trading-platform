@@ -136,8 +136,10 @@ final case class QuotedAmount(
   * mobile ranges). Identity in NjangiPay is the phone number — most users have no email and no bank
   * account.
   */
-type CmPhoneRule = Match["""\+2376[0-9]{8}"""] DescribedAs
-  "must be a Cameroonian mobile number in the form +2376XXXXXXXX"
+type CmPhoneRule =
+  DescribedAs[Match[
+    """\+2376[0-9]{8}"""
+  ], "must be a Cameroonian mobile number in the form +2376XXXXXXXX"]
 
 type PhoneNumber = PhoneNumber.T
 object PhoneNumber extends RefinedType[String, CmPhoneRule]
@@ -146,18 +148,18 @@ object PhoneNumber extends RefinedType[String, CmPhoneRule]
   * A positive amount of whole XAF francs. XAF has no minor unit — there are no cents — so money is
   * Long, never BigDecimal, never Double.
   */
-type AmountRule = Positive DescribedAs "amount must be a positive whole number of XAF francs"
+type AmountRule = DescribedAs[Positive, "amount must be a positive whole number of XAF francs"]
 
 type AmountXAF = AmountXAF.T
 object AmountXAF extends RefinedType[Long, AmountRule]
 
 type GroupNameRule =
-  (MinLength[3] & MaxLength[80]) DescribedAs "group name must be between 3 and 80 characters"
+  DescribedAs[MinLength[3] & MaxLength[80], "group name must be between 3 and 80 characters"]
 
 type GroupName = GroupName.T
 object GroupName extends RefinedType[String, GroupNameRule]
 
-type OtpCodeRule = Match["[0-9]{6}"] DescribedAs "OTP code must be exactly 6 digits"
+type OtpCodeRule = DescribedAs[Match["[0-9]{6}"], "OTP code must be exactly 6 digits"]
 
 type Otp = Otp.T
 object Otp extends RefinedType[String, OtpCodeRule]
@@ -167,7 +169,7 @@ object Otp extends RefinedType[String, OtpCodeRule]
   * even on a weekly schedule.
   */
 type MemberTargetRule =
-  (GreaterEqual[2] & LessEqual[100]) DescribedAs "member target must be between 2 and 100"
+  DescribedAs[GreaterEqual[2] & LessEqual[100], "member target must be between 2 and 100"]
 
 type MemberTarget = MemberTarget.T
 object MemberTarget extends RefinedType[Int, MemberTargetRule]
